@@ -28,15 +28,20 @@ def sql2df(query, **kwargs):
 TODAY = '2013/12/12' # date of snapshot
 
 # Initial DataFrame of ALL companies with at least one data point
-query = ('SELECT o.id, o.category_code, o.founded_at ' +
+query = ('SELECT o.id, ' +
+         '       o.category_code, ' + 
+         '       o.status, ' +
+         '       o.founded_at ' +
          'FROM cb_objects AS o ' +
          "WHERE o.entity_type = 'company'")
 df = sql2df(query, parse_dates=['founded_at'])
 
+# NOTE status \in {'operating', 'acquired', 'ipo', 'closed'}
+
 #------------------------------------------------------------------------------ 
 #        Start the feature engineering!
 #------------------------------------------------------------------------------
-# 1. # employees
+# 1. # employees -- can't get # employees at the date of exit...
 
 # 2. # months company age (== (acq_date, or present) - (date of founding):
 query = ('SELECT o.id, ' +
@@ -49,7 +54,6 @@ query = ('SELECT o.id, ' +
 rf = sql2df(query, parse_dates=['acquir_at'])
 rf.columns = ['acquired_at'] # use better name
 df = df.join(rf, how='outer')
-# df.acquired_at.fillna(value=pd.Timestamp(TODAY), inplace=True)
 df['age_at_acq'] = df.acquired_at - df.founded_at
 
 # 2b. # months company age at IPO: 
@@ -60,8 +64,13 @@ query = ('SELECT o.id, i.public_at ' +
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query, parse_dates=['public_at'])
 df = df.join(rf, how='outer')
-# df.public_at.fillna(value=pd.Timestamp(TODAY), inplace=True)
-df['age_at_ipo'] = df['public_at'] - df['founded_at']
+df['age_at_ipo'] = df.public_at - df.founded_at
+
+# Consolidate ages into single column
+df['age_at_exit'] = df[['age_at_acq', 'age_at_ipo']].min(axis=1)
+
+# Fill NaT values to company age at present
+df.age_at_exit = df.age_at_exit.dt.days # convert to floats
 
 # 3. # milestones on CrunchBase profile (i.e. Facebook added newsfeed): 
 query = ('SELECT o.id, ' +
@@ -77,7 +86,6 @@ rf = sql2df(query)
 rf = rf.groupby('id').sum() # sum milestones completed
 rf.columns = ['milestones']
 df = df.join(rf, how='outer')
-# df.milestones.fillna(value=0, inplace=True)
 
 # 8. Company Location
 # query = ('SELECT o.id, o.region ' +
@@ -85,7 +93,6 @@ df = df.join(rf, how='outer')
 #          "WHERE o.entity_type = 'company'")
 # rf = sql2df(query)
 # df = df.join(rf, how='outer')
-# # df.fillna(value='unknown', inplace=True)
 # df.loc[df.region == 'unknown', 'region'] = np.nan
 
 # 8b. Company Location -- (latitude, longitude)
@@ -96,7 +103,7 @@ query = ('SELECT o.id, l.latitude, l.longitude ' +
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query)
 df = df.join(rf, how='outer')
-# df.fillna(value='unknown', inplace=True)
+
 
 # 9. # offices: 
 query = ('SELECT o.id, ' +
@@ -108,7 +115,6 @@ query = ('SELECT o.id, ' +
          'GROUP BY o.id')
 rf = sql2df(query)
 df = df.join(rf, how='outer')
-# df.offices.fillna(value=0, inplace=True)
 
 # 10. # products: 
 query = ('SELECT o.id,  ' +
@@ -156,7 +162,6 @@ rf = sql2df(query)
 rf = rf.groupby('id').sum(min_count=1) # sum milestones completed
 rf.columns = ['acq_before_acq']
 df = df.join(rf, how='outer')
-# df.milestones.fillna(value=0, inplace=True)
 
 # 14b. # acquisitions by the company BEFORE IPO:
 query = ('SELECT o.id, ' +
@@ -170,7 +175,9 @@ query = ('SELECT o.id, ' +
          'GROUP BY o.id')
 rf = sql2df(query)
 df = df.join(rf, how='outer')
-# df.milestones.fillna(value=0, inplace=True)
+
+# Consolidate acquisitions into single column
+df['acq_before_exit'] = df[['acq_before_acq', 'acq_before_ipo']].min(axis=1)
 
 # 15. # VC and PE firms investing in the company (total):
 query = ('SELECT o.id,  ' +
@@ -196,7 +203,7 @@ query = ('SELECT o.id, o.funding_total_usd ' +
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query)
 df = df.join(rf, how='outer')
-df['usd_per_round'] = df.funding_total_usd / df.funding_rounds
+df['funding_per_round'] = df.funding_total_usd / df.funding_rounds
 
 # 20. founder experience
 query = ('SELECT o1.id, ' +
@@ -220,11 +227,40 @@ rf = rf.experience.dt.days.groupby('id').sum(min_count=1) # sum milestones compl
 df = df.join(rf, how='outer')
 
 # Clean up before labeling
-df.dropna(axis='index', how='all', inplace=True)
+Ntot = df.shape[0]
+df.drop_duplicates(inplace=True)
+
+# Need to fill NaN values 
+df.category_code.fillna(value='other', inplace=True)
+df.age_at_exit.fillna(value=(pd.Timestamp(TODAY) - df.founded_at), inplace=True)
+df.milestones.fillna(value=0, inplace=True)
+# NOTE fillna with lat/lon of city
+df.latitude.fillna(value=0, inplace=True)
+df.longitude.fillna(value=0, inplace=True)
+df.offices.fillna(value=0, inplace=True)
+df.products.fillna(value=0, inplace=True)
+df.funding_rounds.fillna(value=0, inplace=True)
+df.investment_rounds.fillna(value=0, inplace=True)
+df.invested_companies.fillna(value=0, inplace=True)
+df.acq_before_exit.fillna(value=0, inplace=True)
+df.investors_per_round.fillna(value=0, inplace=True)
+df.funding_per_round.fillna(value=0, inplace=True)
+df.experience.fillna(value=0, inplace=True)
 
 #------------------------------------------------------------------------------ 
 #        Create labels
 #------------------------------------------------------------------------------
 # What is a successful exit? acquisition or IPO BEFORE predefined time window
+# NOTE look at distribution of company age at exit before setting threshold
+n_years = 6
+threshold = n_years * 365
+
+df['label'] = np.nan
+df.loc[df.status == 'acquired', 'label'] = 1 # Positive Examples
+df.loc[df.status == 'ipo', 'label'] = 1
+df.loc[df.status == 'closed', 'label'] = 0 # Obvious negative examples
+df.loc[(df.status == 'operating') & (df.age_at_exit > threshold), 'label'] = 0 # Less obvious negative examples
+df.loc[(df.status == 'operating') & (df.age_at_exit < threshold), 'label'] = 2 # Third class of pending
+
 #==============================================================================
 #==============================================================================

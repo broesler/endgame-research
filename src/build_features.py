@@ -29,9 +29,12 @@ TODAY = '2013/12/12' # date of snapshot
 
 # Initial DataFrame of ALL companies with at least one data point
 query = ('SELECT o.id, ' +
+         '       o.name, ' + 
+         '       o.permalink, ' + 
          '       o.category_code, ' + 
          '       o.status, ' +
-         '       o.founded_at ' +
+         '       o.founded_at, ' +
+         '       o.closed_at ' +
          'FROM cb_objects AS o ' +
          "WHERE o.entity_type = 'company'")
 df = sql2df(query, parse_dates=['founded_at'])
@@ -102,8 +105,8 @@ query = ('SELECT o.id, l.latitude, l.longitude ' +
          '  ON o.id = l.object_id ' +
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query)
+rf = rf.groupby('id').first() # remove duplicate IDs (
 df = df.join(rf, how='outer')
-
 
 # 9. # offices: 
 query = ('SELECT o.id, ' +
@@ -232,20 +235,21 @@ df.drop_duplicates(inplace=True)
 
 # Need to fill NaN values 
 df.category_code.fillna(value='other', inplace=True)
-df.age_at_exit.fillna(value=(pd.Timestamp(TODAY) - df.founded_at), inplace=True)
-df.milestones.fillna(value=0, inplace=True)
+df.age_at_exit.fillna(value=df.age_at_exit.max(), inplace=True)
+# df.milestones.fillna(value=0, inplace=True)
 # NOTE fillna with lat/lon of city
-df.latitude.fillna(value=0, inplace=True)
-df.longitude.fillna(value=0, inplace=True)
-df.offices.fillna(value=0, inplace=True)
-df.products.fillna(value=0, inplace=True)
-df.funding_rounds.fillna(value=0, inplace=True)
-df.investment_rounds.fillna(value=0, inplace=True)
-df.invested_companies.fillna(value=0, inplace=True)
-df.acq_before_exit.fillna(value=0, inplace=True)
-df.investors_per_round.fillna(value=0, inplace=True)
-df.funding_per_round.fillna(value=0, inplace=True)
-df.experience.fillna(value=0, inplace=True)
+# df.latitude.fillna(value=0, inplace=True)
+# df.longitude.fillna(value=0, inplace=True)
+# df.offices.fillna(value=0, inplace=True)
+# df.products.fillna(value=0, inplace=True)
+# df.funding_rounds.fillna(value=0, inplace=True)
+# df.investment_rounds.fillna(value=0, inplace=True)
+# df.invested_companies.fillna(value=0, inplace=True)
+# df.acq_before_exit.fillna(value=0, inplace=True)
+# df.investors.fillna(value=0, inplace=True)
+# df.investors_per_round.fillna(value=0, inplace=True)
+# df.funding_per_round.fillna(value=0, inplace=True)
+# df.experience.fillna(value=0, inplace=True)
 
 #------------------------------------------------------------------------------ 
 #        Create labels
@@ -255,12 +259,21 @@ df.experience.fillna(value=0, inplace=True)
 n_years = 6
 threshold = n_years * 365
 
-df['label'] = np.nan
-df.loc[df.status == 'acquired', 'label'] = 1 # Positive Examples
-df.loc[df.status == 'ipo', 'label'] = 1
-df.loc[df.status == 'closed', 'label'] = 0 # Obvious negative examples
-df.loc[(df.status == 'operating') & (df.age_at_exit > threshold), 'label'] = 0 # Less obvious negative examples
-df.loc[(df.status == 'operating') & (df.age_at_exit < threshold), 'label'] = 2 # Third class of pending
+df['success'] = np.nan
+df['failure'] = np.nan
+df.loc[df.status == 'acquired', ['success', 'failure']] = [1, 0] # Positive Examples
+df.loc[df.status == 'ipo', ['success', 'failure']] = [1, 0]
+df.loc[df.status == 'closed', ['success', 'failure']] = [0, 1] # Obvious negative examples
+df.loc[(df.status == 'operating') 
+       & (df.age_at_exit > threshold), 
+       ['success', 'failure']] = [0, 0] # Less obvious negative examples
+df.loc[(df.status == 'operating') 
+        & (df.age_at_exit < threshold), 
+        ['success', 'failure']] = [0, 0] # Third class of pending
 
+# Write final dataframe to csv
+print('Writing features to file...')
+df.to_csv('../data/my_cb_input.csv')
+print('done.')
 #==============================================================================
 #==============================================================================

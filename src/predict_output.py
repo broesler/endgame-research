@@ -32,13 +32,6 @@ def Nstats(X, y):
     Fu = y[(y.success == 0) & (y.failure == 0)].shape[0] / N # fraction unknown
     return np.array([N, Fs, Ff, Fu])
 
-# def return_df(func):
-#     """Wrapper to convert output to a dataframe."""
-#     def wrapper(*args, **kwargs):
-#         r = func(*args, **kwargs)
-#         df = pd.DataFrame(
-
-
 # Equivalent to "shortg" Matlab format
 np.set_printoptions(precision=4, suppress=True)
 
@@ -56,10 +49,6 @@ labels = ['success', 'failure']
 X = df[feat_cols]
 y = df[labels]
 
-#------------------------------------------------------------------------------ 
-#        Data Statistics
-#------------------------------------------------------------------------------
-
 Nt = Nstats(X, y)
 
 # Impute NaN values to mean of column
@@ -75,47 +64,33 @@ X_train, X_test, y_train, y_test = train_test_split(Xn, y, train_size=0.7, rando
 N_train = Nstats(X_train, y_train)
 N_test = Nstats(X_test, y_test)
 
-# # Perform PCA decomposition to see n most important stats
-# U, sigma, V = np.linalg.svd(Xn.T) # sigma is shape (m,) array, NOT matrix
-#
-# m = sigma.shape[0]  # number of singular values
-# k = 6               # number of dimensions in subspace (i.e. PCs to keep)
-#
-# explained_variance_ratio = sigma / sum(sigma)
-#
-# thresh = 0.8
-# idx_sig = np.argmax(np.cumsum(explained_variance_ratio) >= thresh)
-# sigma_allowed = sigma[:idx_sig]
-
 #------------------------------------------------------------------------------ 
 #        Train the Model
 #------------------------------------------------------------------------------
 rfc = RandomForestClassifier(n_estimators=10)
 rfc = rfc.fit(X_train, y_train)
 
-pred_train = rfc.predict(X_train)
-pred_train = pd.DataFrame(data=pred_train,
-                          columns=y_train.columns,
-                          index=y_train.index)
-# print(classification_report(y_train, pred_train))
-
-pred_test = rfc.predict(X_test)
-pred_test = pd.DataFrame(data=pred_test,
-                         columns=y_test.columns,
-                         index=y_test.index)
-# print(classification_report(y_test, pred_test))
-
+# Predict for entire database
 pred = rfc.predict(Xn)
 pred = pd.DataFrame(data=pred, columns=y.columns, index=y.index)
 
-# Confusion matrix -- need to convert back to single value encoding
-# cm = pd.DataFrame(confusion_matrix(y_test, pred_test).T,
-#                   index=['Yes', 'No'],
-#                   columns=['Yes', 'No'])
-# cm.index.name = 'Predicted'
-# cm.columns.name = 'True'
-# cm
+# | Instagarage | Instagarage.com is an online company that will provide
+# a universal gift card where all gift cards are built into one single card
+# that will allow consumers to shop at the retailer of their choice. The
+# Instagarage card will allow consumers to choose multiple retailers, select
+# the dollar amount for each retailer, customize their card, and place them all
+# on a universal gift card to be used at multiple stores on or offline. The
+# universal gift card provides for a fast and easy way to purchase merchandise
+# online, via a cellphone display screen, or at the retailer's checkout
+# counter.
+# Closed: February 2, 2011
 
+in_str = 'instagarage' # instagarage, ebay
+in_permalink = '/company/' + in_str
+
+out_id = df[df.permalink == in_permalink].index[0]
+out_pred = pred.loc[out_id]
+out_info = df.loc[out_id]
 
 #==============================================================================
 #==============================================================================

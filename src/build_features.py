@@ -25,7 +25,8 @@ def sql2df(query, **kwargs):
 #------------------------------------------------------------------------------ 
 #        Initialize
 #------------------------------------------------------------------------------
-TODAY = '2013/12/12' # date of snapshot
+# TODAY = '2013/12/12' # date of snapshot YYYY/MM/DD
+TODAY = '2014/01/10' # most recent founded_at date
 
 # Initial DataFrame of ALL companies with at least one data point
 query = ('SELECT o.id, ' +
@@ -33,8 +34,7 @@ query = ('SELECT o.id, ' +
          '       o.permalink, ' + 
          '       o.category_code, ' + 
          '       o.status, ' +
-         '       o.founded_at, ' +
-         '       o.closed_at ' +
+         '       o.founded_at ' +
          'FROM cb_objects AS o ' +
          "WHERE o.entity_type = 'company'")
 df = sql2df(query, parse_dates=['founded_at'])
@@ -69,11 +69,16 @@ rf = sql2df(query, parse_dates=['public_at'])
 df = df.join(rf, how='outer')
 df['age_at_ipo'] = df.public_at - df.founded_at
 
-# Consolidate ages into single column
-df['age_at_exit'] = df[['age_at_acq', 'age_at_ipo']].min(axis=1)
+# 2c. # months company age close: 
+query = ('SELECT o.id, o.closed_at ' +
+         'FROM cb_objects AS o ' +
+         "WHERE o.entity_type = 'company'")
+rf = sql2df(query, parse_dates=['closed_at'])
+df = df.join(rf, how='outer')
+df['age_at_close'] = df.closed_at - df.founded_at
 
-# Fill NaT values to company age at present
-df.age_at_exit = df.age_at_exit.dt.days # convert to floats
+# Consolidate ages into single column
+df['age_at_exit'] = df[['age_at_acq', 'age_at_ipo', 'age_at_close']].min(axis=1)
 
 # 3. # milestones on CrunchBase profile (i.e. Facebook added newsfeed): 
 query = ('SELECT o.id, ' +
@@ -235,21 +240,13 @@ df.drop_duplicates(inplace=True)
 
 # Need to fill NaN values 
 df.category_code.fillna(value='other', inplace=True)
-df.age_at_exit.fillna(value=df.age_at_exit.max(), inplace=True)
-# df.milestones.fillna(value=0, inplace=True)
+# df.age_at_exit.fillna(value=df.age_at_exit.max(), inplace=True)
+df.age_at_exit.fillna(value=(pd.Timestamp(TODAY) - df.founded_at), inplace=True)
+
 # NOTE fillna with lat/lon of city
-# df.latitude.fillna(value=0, inplace=True)
-# df.longitude.fillna(value=0, inplace=True)
-# df.offices.fillna(value=0, inplace=True)
-# df.products.fillna(value=0, inplace=True)
-# df.funding_rounds.fillna(value=0, inplace=True)
-# df.investment_rounds.fillna(value=0, inplace=True)
-# df.invested_companies.fillna(value=0, inplace=True)
-# df.acq_before_exit.fillna(value=0, inplace=True)
-# df.investors.fillna(value=0, inplace=True)
-# df.investors_per_round.fillna(value=0, inplace=True)
-# df.funding_per_round.fillna(value=0, inplace=True)
-# df.experience.fillna(value=0, inplace=True)
+
+# Fill NaT values to company age at present
+df.age_at_exit = df.age_at_exit.dt.days # convert to floats
 
 #------------------------------------------------------------------------------ 
 #        Create labels
@@ -259,21 +256,33 @@ df.age_at_exit.fillna(value=df.age_at_exit.max(), inplace=True)
 n_years = 6
 threshold = n_years * 365
 
-df['success'] = np.nan
-df['failure'] = np.nan
-df.loc[df.status == 'acquired', ['success', 'failure']] = [1, 0] # Positive Examples
-df.loc[df.status == 'ipo', ['success', 'failure']] = [1, 0]
-df.loc[df.status == 'closed', ['success', 'failure']] = [0, 1] # Obvious negative examples
-df.loc[(df.status == 'operating') 
-       & (df.age_at_exit > threshold), 
-       ['success', 'failure']] = [0, 0] # Less obvious negative examples
-df.loc[(df.status == 'operating') 
-        & (df.age_at_exit < threshold), 
-        ['success', 'failure']] = [0, 0] # Third class of pending
+# One-hot encode output for random forest
+df['success'] = 0
+df['failure'] = 0
+df.loc[df.status == 'acquired', 'success'] = 1 # Positive Examples
+df.loc[df.status == 'ipo', 'success'] = 1
+df.loc[df.status == 'closed', 'failure'] = 1 # Obvious negative examples
+# Less obvious negative examples
+df.loc[(df.status == 'operating') & (df.age_at_exit > threshold), 'failure'] = 1
+ # Third class of pending
+# df.loc[(df.status == 'operating') & (df.age_at_exit < threshold),
+#        ['success', 'failure']] = [0, 0]
+
+# Also create labeled output 
+df['bin_label'] = 0
+df.loc[(df.success == 1) & (df.failure == 0), 'bin_label'] = 1
+df.loc[(df.success == 0) & (df.failure == 1), 'bin_label'] = 0
+df.loc[(df.success == 0) & (df.failure == 0), 'bin_label'] = 0
+
+df['mul_label'] = 0
+df.loc[(df.success == 1) & (df.failure == 0), 'mul_label'] = 1
+df.loc[(df.success == 0) & (df.failure == 1), 'mul_label'] = 0
+df.loc[(df.success == 0) & (df.failure == 0), 'mul_label'] = 2
 
 # Write final dataframe to csv
-print('Writing features to file...')
-df.to_csv('../data/my_cb_input.csv')
+filename = '../data/cb_input.csv'
+print('Writing features to \'{}\'...'.format(filename))
+df.to_csv(filename)
 print('done.')
 #==============================================================================
 #==============================================================================

@@ -21,23 +21,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, classification_report
 
-#------------------------------------------------------------------------------ 
-#        Define helper functions
-#------------------------------------------------------------------------------
-def Nstats(X, y):
-    """Return tuple of fractions for given dataset."""
-    N = X.shape[0] # total number of examples
-    Fs = y[(y.success == 1) & (y.failure == 0)].shape[0] / N # fraction success
-    Ff = y[(y.success == 0) & (y.failure == 1)].shape[0] / N # fraction failure
-    Fu = y[(y.success == 0) & (y.failure == 0)].shape[0] / N # fraction unknown
-    return np.array([N, Fs, Ff, Fu])
-
-# def return_df(func):
-#     """Wrapper to convert output to a dataframe."""
-#     def wrapper(*args, **kwargs):
-#         r = func(*args, **kwargs)
-#         df = pd.DataFrame(
-
+from cb_funcs import Nstats
 
 # Equivalent to "shortg" Matlab format
 np.set_printoptions(precision=4, suppress=True)
@@ -45,7 +29,7 @@ np.set_printoptions(precision=4, suppress=True)
 plt.ion()
 
 # IMPORT THE DATA!!
-df = pd.read_csv('../data/my_cb_input.csv', index_col='id')
+df = pd.read_csv('../data/cb_input.csv', index_col='id')
 
 feat_cols = ['age_at_exit', 'milestones', 'latitude', 'longitude', 'offices',
              'products', 'funding_rounds', 'investment_rounds',
@@ -59,7 +43,6 @@ y = df[labels]
 #------------------------------------------------------------------------------ 
 #        Data Statistics
 #------------------------------------------------------------------------------
-
 Nt = Nstats(X, y)
 
 # Impute NaN values to mean of column
@@ -70,7 +53,9 @@ Xn = StandardScaler().fit_transform(X)
 Xn = pd.DataFrame(data=Xn, columns=X.columns, index=X.index)
 
 # Test/Train Split
-X_train, X_test, y_train, y_test = train_test_split(Xn, y, train_size=0.7, random_state=56)
+X_train, X_test, y_train, y_test = train_test_split(Xn, y, 
+                                                    train_size=0.6, 
+                                                    random_state=56)
 
 N_train = Nstats(X_train, y_train)
 N_test = Nstats(X_test, y_test)
@@ -97,13 +82,13 @@ pred_train = rfc.predict(X_train)
 pred_train = pd.DataFrame(data=pred_train,
                           columns=y_train.columns,
                           index=y_train.index)
-# print(classification_report(y_train, pred_train))
+print(classification_report(y_train, pred_train))
 
 pred_test = rfc.predict(X_test)
 pred_test = pd.DataFrame(data=pred_test,
                          columns=y_test.columns,
                          index=y_test.index)
-# print(classification_report(y_test, pred_test))
+print(classification_report(y_test, pred_test))
 
 pred = rfc.predict(Xn)
 pred = pd.DataFrame(data=pred, columns=y.columns, index=y.index)

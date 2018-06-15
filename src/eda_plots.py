@@ -29,7 +29,7 @@ np.set_printoptions(precision=4, suppress=True) # "shortg" Matlab format
 plt.ion()
 
 # IMPORT THE DATA!!
-df = pd.read_csv('../data/test_cb_input.csv', index_col='id')
+df = pd.read_csv('../data/cb_input.csv', index_col='id')
 
 feat_cols = ['age_at_exit', 'milestones', 'latitude', 'longitude', 'offices',
              'products', 'funding_rounds', 'investment_rounds',
@@ -92,6 +92,22 @@ if save_flag:
 #------------------------------------------------------------------------------ 
 #        Plot location
 #------------------------------------------------------------------------------
+plt.figure()
+plt.clf()
+ax = plt.gca()
+ax.scatter(df.loc[df.bin_label == 0, 'longitude'],
+           df.loc[df.bin_label == 0, 'latitude'], 
+           c='r', s=10, label='failure')
+ax.scatter(df.loc[df.bin_label == 1, 'longitude'],
+           df.loc[df.bin_label == 1, 'latitude'],
+           c='g', s=10, label='success')
+ax.set_xlabel('Longitude')
+ax.set_ylabel('Latitude')
+ax.set_title('Company Location')
+ax.legend()
+plt.tight_layout()
+if save_flag:
+    plt.savefig(fig_dir + 'location' + fig_ext)
 
 #------------------------------------------------------------------------------ 
 #        Plot Correlation Between Features

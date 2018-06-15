@@ -22,7 +22,7 @@ dropdown_opts = [{'label':v, 'value':k} for k, v in df['name'].to_dict().items()
 app = dash.Dash()
 
 app.layout = html.Div([
-    html.Label('Exit Through the Gift Shop'),
+    html.Label('Will my company exit successfully?'),
     html.Div(
         dcc.Dropdown(
             id='input-list',
@@ -47,13 +47,7 @@ def update_output(n_clicks, value):
     if out_pred.success:
         return "The company {} will likely exit successfully!".format(out_info['name'])
     else:
-        return "The company {} will not, in all likelihood, exit successfully!".format(out_info['name'])
-
-    # options=[
-    #     {'label': 'New York City', 'value': 'NYC'},
-    #     {'label': u'Montréal', 'value': 'MTL'},
-    #     {'label': 'San Francisco', 'value': 'SF'}
-    # ],
+        return "The company {} will probably not exit successfully!".format(out_info['name'])
 
 if __name__ == '__main__':
     app.run_server(debug=True)

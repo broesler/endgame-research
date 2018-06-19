@@ -202,8 +202,8 @@ query = ('SELECT o.id,  ' +
 rf = sql2df(query)
 df = df.join(rf, how='outer')
 
-# 18. # investors per round == # investors (15) / # rounds (13a)
-df['investors_per_round'] = df.investors / df.investment_rounds
+# 18. # investors per round == # investors (15) / # funding rounds (13a)
+df['investors_per_round'] = df.investors / df.funding_rounds
 
 # 19. $ per round == cb_objects.funding_total_usd / # funding rounds (12)
 query = ('SELECT o.id, o.funding_total_usd ' +
@@ -280,9 +280,9 @@ df.loc[(df.success == 0) & (df.failure == 1), 'mul_label'] = 0
 df.loc[(df.success == 0) & (df.failure == 0), 'mul_label'] = 2
 
 # Write final dataframe to csv
-filename = '../data/cb_input.csv'
+filename = '../data/cb_input.pkl'
 print('Writing features to \'{}\'...'.format(filename))
-df.to_csv(filename)
+df.to_pickle(filename)
 print('done.')
 #==============================================================================
 #==============================================================================

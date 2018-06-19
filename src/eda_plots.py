@@ -17,7 +17,7 @@ import seaborn as sns
 
 from cb_funcs import Nstats
 
-save_flag = 1
+save_flag = 0
 fig_dir = './figures/'
 fig_ext = '.png'
 

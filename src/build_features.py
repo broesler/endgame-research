@@ -253,31 +253,41 @@ df.age_at_exit = df.age_at_exit.dt.days # convert to floats
 #------------------------------------------------------------------------------
 # What is a successful exit? acquisition or IPO BEFORE predefined time window
 # NOTE look at distribution of company age at exit before setting threshold
-n_years = 6
-threshold = n_years * 365
+# n_years = 6
+# threshold = n_years * 365
+
+std_ages = df.groupby('category_code').std().age_at_exit
+mean_ages = df.groupby('category_code').mean().age_at_exit
+threshold = mean_ages + 2*std_ages
+
+# Set age threshold for each label
+df['threshold'] = np.nan
+for label in threshold.index:
+    df.loc[df.category_code == label, 'threshold'] = threshold[label]
 
 # One-hot encode output for random forest
-df['success'] = 0
-df['failure'] = 0
-df.loc[df.status == 'acquired', 'success'] = 1 # Positive Examples
-df.loc[df.status == 'ipo', 'success'] = 1
-df.loc[df.status == 'closed', 'failure'] = 1 # Obvious negative examples
+df['success'] = False
+df['failure'] = False
+df.loc[df.status == 'acquired', 'success'] = True # Positive Examples
+df.loc[df.status == 'ipo', 'success'] = True
+df.loc[df.status == 'closed', 'failure'] = True # Obvious negative examples
 # Less obvious negative examples
-df.loc[(df.status == 'operating') & (df.age_at_exit > threshold), 'failure'] = 1
+df.loc[(df.status == 'operating') 
+        & (df.age_at_exit > df.threshold), 'failure'] = True
  # Third class of pending
-# df.loc[(df.status == 'operating') & (df.age_at_exit < threshold),
+# df.loc[(df.status == 'operating') & (df.age_at_exit < df.threshold),
 #        ['success', 'failure']] = [0, 0]
 
 # Also create labeled output 
-df['bin_label'] = 0
-df.loc[(df.success == 1) & (df.failure == 0), 'bin_label'] = 1
-df.loc[(df.success == 0) & (df.failure == 1), 'bin_label'] = 0
-df.loc[(df.success == 0) & (df.failure == 0), 'bin_label'] = 0
+df['bin_label'] = False
+df.loc[ df.success & ~df.failure, 'bin_label'] = True
+df.loc[~df.success &  df.failure, 'bin_label'] = False
+df.loc[~df.success & ~df.failure, 'bin_label'] = False
 
 df['mul_label'] = 0
-df.loc[(df.success == 1) & (df.failure == 0), 'mul_label'] = 1
-df.loc[(df.success == 0) & (df.failure == 1), 'mul_label'] = 0
-df.loc[(df.success == 0) & (df.failure == 0), 'mul_label'] = 2
+df.loc[ df.success & ~df.failure, 'mul_label'] = 1
+df.loc[~df.success &  df.failure, 'mul_label'] = 0
+df.loc[~df.success & ~df.failure, 'mul_label'] = 2
 
 # Write final dataframe to csv
 filename = '../data/cb_input.pkl'

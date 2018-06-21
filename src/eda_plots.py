@@ -15,8 +15,6 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
 import seaborn as sns
 
-from cb_funcs import Nstats
-
 save_flag = 0
 fig_dir = './figures/'
 fig_ext = '.png'
@@ -29,65 +27,83 @@ np.set_printoptions(precision=4, suppress=True) # "shortg" Matlab format
 plt.ion()
 
 # IMPORT THE DATA!!
-df = pd.read_csv('../data/cb_input.csv', index_col='id')
+df = pd.read_pickle('../data/cb_input_multi.pkl')
 
 feat_cols = ['age_at_exit', 'milestones', 'latitude', 'longitude', 'offices',
              'products', 'funding_rounds', 'investment_rounds',
              'invested_companies', 'acq_before_exit', 'investors',
-             'investors_per_round', 'funding_per_round', 'experience']
-labels = ['success', 'failure']
+             'investors_per_round', 'funding_per_round', 'avg_time_to_funding',
+             'experience']
+# funding_rounds = ['a', 'angel', 'b', 'c', 'convertible', 'crowd',
+#              'crowd_equity', 'd', 'debt_round', 'e', 'f', 'g', 'grant',
+#              'partial', 'post_ipo_debt', 'post_ipo_equity', 'private_equity',
+#              'secondary_market', 'seed', 'unattributed']
+
+classes = ['Failed', 'Timely Exit', 'Late Exit', 'Steady Operation']
+colors = ['C3', 'C2', 'C1', 'C0']
 
 df['age_at_exit_years'] = df.age_at_exit / 365
 
-X = df[feat_cols]
-y = df[labels]
+y = df.label
 
 #------------------------------------------------------------------------------ 
 #        Data Statistics
 #------------------------------------------------------------------------------
-Nt = Nstats(X, y)
-
 plt.figure(1, figsize=(11, 9))
 plt.clf()
-g = sns.boxplot(x='category_code', 
-                y='age_at_exit_years', 
-                data=df[y.success == 1])
+g = sns.boxplot(y='category_code', 
+                x='age_at_exit_years', 
+                data=df[y == 1])
 plt.title('Age at Exit (Acquisition or IPO)')
 plt.xticks(rotation=70)
-g.set_ylabel('Age (years)')
-g.set_xlabel('Category')
-g.set_ylim([0, 50])
+g.set_xlabel('Age (years)')
+g.set_ylabel('Category')
+g.set_xlim([0, 50])
 plt.tight_layout()
 if save_flag:
     plt.savefig(fig_dir + 'age_at_exit_success' + fig_ext)
 
 plt.figure(2, figsize=(11, 9))
 plt.clf()
-g = sns.boxplot(x='category_code', 
-                y='age_at_exit_years', 
-                data=df[y.failure == 1])
+g = sns.boxplot(y='category_code', 
+                x='age_at_exit_years', 
+                data=df[y == 0])
 plt.title('Age at Close')
-g.set_ylabel('Age (years)')
-g.set_xlabel('Category')
-g.set_ylim([0, 50])
+g.set_xlabel('Age (years)')
+g.set_ylabel('Category')
+g.set_xlim([0, 50])
 plt.xticks(rotation=70)
 plt.tight_layout()
 if save_flag:
     plt.savefig(fig_dir + 'age_at_exit_failure' + fig_ext)
 
-plt.figure(3, figsize=(11, 9))
-plt.clf()
-g = sns.boxplot(x='category_code', 
-                y='age_at_exit_years', 
-                data=df[(y.success == 0) & (y.failure == 0)])
-plt.title('Age of Operating Companies')
-g.set_ylabel('Age (years)')
-g.set_xlabel('Category')
-g.set_ylim([0, 50])
-plt.xticks(rotation=70)
-plt.tight_layout()
-if save_flag:
-    plt.savefig(fig_dir + 'age_at_exit_operating' + fig_ext)
+# plt.figure(3, figsize=(11, 9))
+# plt.clf()
+# g = sns.boxplot(y='category_code', 
+#                 x='age_at_exit_years', 
+#                 data=df[y == 2])
+# plt.title('Age of Dinosaurs')
+# g.set_xlabel('Age (years)')
+# g.set_ylabel('Category')
+# g.set_xlim([0, 50])
+# plt.xticks(rotation=70)
+# plt.tight_layout()
+# if save_flag:
+#     plt.savefig(fig_dir + 'age_at_exit_lateexit' + fig_ext)
+#
+# plt.figure(4, figsize=(11, 9))
+# plt.clf()
+# g = sns.boxplot(y='category_code', 
+#                 x='age_at_exit_years', 
+#                 data=df[y == 3])
+# plt.title('Age of Operating Companies')
+# g.set_xlabel('Age (years)')
+# g.set_ylabel('Category')
+# g.set_xlim([0, 50])
+# plt.xticks(rotation=70)
+# plt.tight_layout()
+# if save_flag:
+#     plt.savefig(fig_dir + 'age_at_exit_operating' + fig_ext)
 
 #------------------------------------------------------------------------------ 
 #        Plot location
@@ -95,12 +111,10 @@ if save_flag:
 plt.figure()
 plt.clf()
 ax = plt.gca()
-ax.scatter(df.loc[df.bin_label == 0, 'longitude'],
-           df.loc[df.bin_label == 0, 'latitude'], 
-           c='r', s=10, label='failure')
-ax.scatter(df.loc[df.bin_label == 1, 'longitude'],
-           df.loc[df.bin_label == 1, 'latitude'],
-           c='g', s=10, label='success')
+for i in range(len(classes)):
+    ax.scatter(df.loc[df.label == i, 'longitude'],
+               df.loc[df.label == i, 'latitude'], 
+               s=10, color=colors[i], label=classes[i])
 ax.set_xlabel('Longitude')
 ax.set_ylabel('Latitude')
 ax.set_title('Company Location')
@@ -112,7 +126,7 @@ if save_flag:
 #------------------------------------------------------------------------------ 
 #        Plot Correlation Between Features
 #------------------------------------------------------------------------------
-corr = X.corr()
+corr = df[feat_cols].corr()
 
 # Mask off upper triangle
 mask = np.zeros_like(corr, dtype=np.bool)

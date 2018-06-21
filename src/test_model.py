@@ -10,6 +10,7 @@
 #==============================================================================
 
 import pandas as pd
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rc as mplrc
@@ -23,6 +24,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, roc_curve, auc
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.utils import resample
+
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Equivalent to "shortg" Matlab format
 np.set_printoptions(precision=4, suppress=True)
@@ -42,6 +45,8 @@ feat_cols = ['age_at_exit', 'milestones', 'latitude', 'longitude', 'offices',
              'crowd_equity', 'd', 'debt_round', 'e', 'f', 'g', 'grant',
              'partial', 'post_ipo_debt', 'post_ipo_equity', 'private_equity',
              'secondary_market', 'seed', 'unattributed']
+
+classes = ['Failed', 'Timely Exit', 'Late Exit', 'Steady Operation']
 
 #------------------------------------------------------------------------------ 
 #        Upsample minority classes
@@ -65,8 +70,6 @@ for i in range(3):
 # Combine majority class with upsampled minority class
 df_up = pd.concat([df_maj] + df_min_u)
 
-df = df_up # use resampled data!
-
 # Display new class counts
 # df_up.label.value_counts()
 # 1.0    16904
@@ -78,10 +81,10 @@ df = df_up # use resampled data!
 #------------------------------------------------------------------------------ 
 #        Extract features and labels
 #------------------------------------------------------------------------------
-X = df[feat_cols]
+X = df_up[feat_cols]
 
 # Binarize the labels
-y = df.label
+y = df_up.label
 yb = label_binarize(y, classes=[0, 1, 2, 3])
 y = pd.DataFrame(data=yb, index=y.index)
 
@@ -97,7 +100,7 @@ Xn = pd.DataFrame(data=Xn, columns=X.columns, index=X.index)
 
 # Train/Test Split -- "_test" == HOLDOUT
 X_train, X_test, y_train, y_test = train_test_split(Xn, y, 
-                                                    train_size=0.9, 
+                                                   train_size=0.9, 
                                                     stratify=y,
                                                     random_state=56)
 
@@ -128,28 +131,46 @@ pred_test = pd.DataFrame(data=pred_test,
                          index=y_test.index)
 # print(classification_report(y_test, pred_test))
 
-# Predict ALL outcomes
-# pred = clf.predict(Xn)
-# pred = pd.DataFrame(data=pred, index=y.index)
-
-# TODO Confusion matrix -- need to convert back to single value encoding
-# cm = pd.DataFrame(confusion_matrix(y_test, pred_test).T,
-#                   index=['Yes', 'No'],
-#                   columns=['Yes', 'No'])
-# cm.index.name = 'Predicted'
-# cm.columns.name = 'True'
-# cm
-
 #------------------------------------------------------------------------------ 
 #        Feature Importance
 #------------------------------------------------------------------------------
 fp = dict(zip(feat_cols, clf.feature_importances_))
 fp = [(k, fp[k]) for k in sorted(fp, key=fp.get, reverse=True)]
 
+ranked_features = [x[0] for x in fp]
+
+# Get predictions for all companies (not using upsampled data)
+Xa = df[feat_cols]
+Xa = Xa.fillna(Xa.median())
+Xan = StandardScaler().fit_transform(Xa)
+Xan = pd.DataFrame(data=Xan, columns=Xa.columns, index=Xa.index)
+
+# Predict ALL outcomes (not using upsampled data)
+pred = clf.predict(Xan)
+pred = pd.DataFrame(data=pred, index=Xan.index)
+pred_probas = clf.predict_proba(Xan)
+
+# PICKLE ME
+pickle.dump([pred, pred_probas], open('../data/predictions.pkl', 'wb'))
+# pred, pred_probas = pickle.load(open('../data/predictions.pkl', 'rb'))
+
+# Get most similar companies
+# Xan = Xan[df.category_code == 'web']
+# C = cosine_similarity(Xan[ranked_features[0:3]])
+# C = pd.DataFrame(data=C, index=Xan.index, columns=Xan.index).abs()
+
 #------------------------------------------------------------------------------ 
 #        ROC Curves
 #------------------------------------------------------------------------------
 probas_ = clf.predict_proba(X_test)
+
+# To test multiple classifiers:
+# # Plot the decision boundary. For that, we will assign a color to each
+# # point in the mesh [x_min, x_max]x[y_min, y_max].
+# if hasattr(clf, "decision_function"):
+#     Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
+# else:
+#     Z = clf.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:, 1]
 
 # Compute ROC curve and ROC area for each class
 n_classes = y.shape[1]
@@ -189,7 +210,6 @@ plt.clf()
 #                ''.format(roc_auc['micro']),
 #          color='deeppink', linestyle=':', linewidth=4)
 
-classes = ['Failed', 'Timely Exit', 'Late Exit', 'Steady Operation']
 for i in range(n_classes):
     plt.plot(fpr[i], tpr[i], 
              label="{} (AUC = {:0.2f})".format(classes[i], roc_auc[i]))

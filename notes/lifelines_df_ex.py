@@ -13,6 +13,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+from lifelines.utils import covariates_from_event_matrix
 from lifelines.utils import to_long_format, add_covariate_to_timeline
 
 seed_df = pd.DataFrame.from_records([
@@ -45,5 +46,29 @@ df = seed_df.pipe(to_long_format, 'T')\
 4      6            10.0     10.0  10.0  SU  False
 5     10            19.0      9.0  10.0  SU   True
 """
+
+# Event matrix
+base_df = pd.DataFrame.from_records([{'id':1, 'E1':1, 'E3':2}, 
+                                     {'id':2, 'E2':5},
+                                     {'id':3, 'E1':3, 'E2':5, 'E3':7}])
+"""
+    id    E1      E2     E3
+0   1     1.0     NaN    2.0
+1   2     NaN     5.0    NaN
+2   3     3.0     5.0    7.0
+"""
+
+cv = covariates_from_event_matrix(base_df, 'id')
+"""
+event  id  duration  E1  E2  E3
+0       1       1.0   1   0   0
+1       1       2.0   0   0   1
+2       2       5.0   0   1   0
+3       3       3.0   1   0   0
+4       3       5.0   0   1   0
+5       3       7.0   0   0   1
+"""
+
+
 #==============================================================================
 #==============================================================================

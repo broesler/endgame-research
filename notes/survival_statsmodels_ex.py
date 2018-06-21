@@ -17,9 +17,7 @@ plt.close('all')
 
 data = sm.datasets.get_rdataset("flchain", "survival").data
 df = data.loc[data.sex == "F", :]
-# sf = sm.SurvfuncRight(df["futime"], df["death"])
-sf = sm.SurvfuncRight(df["futime"], df["death"], 
-                      exog=df.drop(columns=['futime', 'death', 'sex', 'chapter']))
+sf = sm.SurvfuncRight(df["futime"], df["death"])
 
 print(sf.summary().head())
 # print(sf.quantile(0.25))

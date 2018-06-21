@@ -36,7 +36,7 @@ query = ('SELECT o.id, ' +
          '       o.status, ' +
          '       o.founded_at ' +
          'FROM cb_objects AS o ' +
-         "WHERE o.entity_type = 'company'")
+         "WHERE o.entity_type = 'company' AND o.founded_at IS NOT NULL")
 df = sql2df(query, parse_dates=['founded_at'])
 
 # NOTE status \in {'operating', 'acquired', 'ipo', 'closed'}
@@ -56,7 +56,7 @@ query = ('SELECT o.id, ' +
          'GROUP BY o.id')
 rf = sql2df(query, parse_dates=['acquir_at'])
 rf.columns = ['acquired_at'] # use better name
-df = df.join(rf, how='outer')
+df = df.join(rf, how='left')
 df['age_at_acq'] = df.acquired_at - df.founded_at
 
 # 2b. # months company age at IPO: 
@@ -66,7 +66,7 @@ query = ('SELECT o.id, i.public_at ' +
          '  ON o.id = i.object_id ' +
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query, parse_dates=['public_at'])
-df = df.join(rf, how='outer')
+df = df.join(rf, how='left')
 df['age_at_ipo'] = df.public_at - df.founded_at
 
 # 2c. # months company age close: 
@@ -74,7 +74,7 @@ query = ('SELECT o.id, o.closed_at ' +
          'FROM cb_objects AS o ' +
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query, parse_dates=['closed_at'])
-df = df.join(rf, how='outer')
+df = df.join(rf, how='left')
 df['age_at_close'] = df.closed_at - df.founded_at
 
 # Consolidate ages into single column
@@ -93,14 +93,14 @@ query = ('SELECT o.id, ' +
 rf = sql2df(query)
 rf = rf.groupby('id').sum() # sum milestones completed
 rf.columns = ['milestones']
-df = df.join(rf, how='outer')
+df = df.join(rf, how='left')
 
 # 8. Company Location
 # query = ('SELECT o.id, o.region ' +
 #          'FROM cb_objects AS o ' +
 #          "WHERE o.entity_type = 'company'")
 # rf = sql2df(query)
-# df = df.join(rf, how='outer')
+# df = df.join(rf, how='left')
 # df.loc[df.region == 'unknown', 'region'] = np.nan
 
 # 8b. Company Location -- (latitude, longitude)
@@ -111,7 +111,7 @@ query = ('SELECT o.id, l.latitude, l.longitude ' +
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query)
 rf = rf.groupby('id').first() # remove duplicate IDs (
-df = df.join(rf, how='outer')
+df = df.join(rf, how='left')
 
 # 9. # offices: 
 query = ('SELECT o.id, ' +
@@ -122,7 +122,7 @@ query = ('SELECT o.id, ' +
          "WHERE o.entity_type = 'company' " +
          'GROUP BY o.id')
 rf = sql2df(query)
-df = df.join(rf, how='outer')
+df = df.join(rf, how='left')
 
 # 10. # products: 
 query = ('SELECT o.id,  ' +
@@ -133,28 +133,28 @@ query = ('SELECT o.id,  ' +
          "WHERE o.entity_type = 'company' " +
          'GROUP BY o.id')
 rf = sql2df(query)
-df = df.join(rf, how='outer')
+df = df.join(rf, how='left')
 
 # 12. # funding rounds: 
 query = ('SELECT o.id, o.funding_rounds ' +
          'FROM cb_objects AS o ' + 
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query)
-df = df.join(rf, how='outer')
+df = df.join(rf, how='left')
 
 # 13a. # investment rounds by the company: 
 query = ('SELECT o.id, o.investment_rounds ' +
          'FROM cb_objects AS o ' +
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query)
-df = df.join(rf, how='outer')
+df = df.join(rf, how='left')
 
 # 13b. # companies invested in by the company: 
 query = ('SELECT o.id, o.invested_companies ' +
          'FROM cb_objects AS o ' + 
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query)
-df = df.join(rf, how='outer')
+df = df.join(rf, how='left')
 
 # 14. # acquisitions by the company:
 query = ('SELECT o.id, ' +
@@ -169,7 +169,7 @@ query = ('SELECT o.id, ' +
 rf = sql2df(query)
 rf = rf.groupby('id').sum(min_count=1) # sum milestones completed
 rf.columns = ['acq_before_acq']
-df = df.join(rf, how='outer')
+df = df.join(rf, how='left')
 
 # 14b. # acquisitions by the company BEFORE IPO:
 query = ('SELECT o.id, ' +
@@ -182,7 +182,7 @@ query = ('SELECT o.id, ' +
          "WHERE o.entity_type = 'company' " +
          'GROUP BY o.id')
 rf = sql2df(query)
-df = df.join(rf, how='outer')
+df = df.join(rf, how='left')
 
 # Consolidate acquisitions into single column
 df['acq_before_exit'] = df[['acq_before_acq', 'acq_before_ipo']].min(axis=1)
@@ -200,7 +200,7 @@ query = ('SELECT o.id,  ' +
          "WHERE b.entity_type = 'FinancialOrg' " +
          'GROUP BY o.id')
 rf = sql2df(query)
-df = df.join(rf, how='outer')
+df = df.join(rf, how='left')
 
 # 18. # investors per round == # investors (15) / # funding rounds (13a)
 df['investors_per_round'] = df.investors / df.funding_rounds
@@ -210,8 +210,38 @@ query = ('SELECT o.id, o.funding_total_usd ' +
          'FROM cb_objects AS o ' + 
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query)
-df = df.join(rf, how='outer')
+df = df.join(rf, how='left')
 df['funding_per_round'] = df.funding_total_usd / df.funding_rounds
+
+# 19b. Time between rounds
+query = """
+SELECT o.id,
+       TIMESTAMPDIFF(DAY, o.founded_at, f.funded_at) AS time_to_funding
+FROM cb_objects AS o 
+JOIN cb_funding_rounds AS f 
+ON o.id = f.object_id
+WHERE f.raised_amount_usd IS NOT NULL
+    AND TIMESTAMPDIFF(DAY, o.founded_at, f.funded_at) IS NOT NULL
+"""
+rf = sql2df(query)
+rf = rf.time_to_funding.groupby('id').mean()
+rf.name = 'avg_time_to_funding'
+rf = rf[rf >= 0] # eliminate negative numbers
+df = df.join(rf, how='inner')
+
+# Last funding round code
+query = """
+SELECT  o.id,
+        f.funding_round_code
+FROM cb_objects AS o 
+JOIN cb_funding_rounds AS f 
+ON o.id = f.object_id
+WHERE o.founded_at IS NOT NULL
+    AND o.last_funding_at = f.funded_at
+"""
+rf = sql2df(query)
+rf.columns = ['last_funding_round_code']
+df = df.join(rf, how='inner')
 
 # 20. founder experience
 query = ('SELECT o1.id, ' +
@@ -232,30 +262,42 @@ rf = rf.join(df.founded_at, how='left')
 rf['experience'] = rf.founded_at - rf.earliest_start
 rf.loc[rf.experience < pd.Timedelta(0), 'experience'] = pd.NaT
 rf = rf.experience.dt.days.groupby('id').sum(min_count=1) # sum milestones completed
-df = df.join(rf, how='outer')
+df = df.join(rf, how='left')
 
-# Clean up before labeling
-Ntot = df.shape[0]
-df.drop_duplicates(inplace=True)
+# Add funding round code as categorical values
+dvs = pd.get_dummies(df.last_funding_round_code)
+df = df.join(dvs, how='inner')
 
-# Need to fill NaN values 
+#------------------------------------------------------------------------------ 
+#        Clean up
+#------------------------------------------------------------------------------
+# Need to fill some NaN values 
 df.category_code.fillna(value='other', inplace=True)
-# df.age_at_exit.fillna(value=df.age_at_exit.max(), inplace=True)
+
+# Fill NaT values to company age at present
 df.age_at_exit.fillna(value=(pd.Timestamp(TODAY) - df.founded_at), inplace=True)
+df.age_at_exit = df.age_at_exit.dt.days # convert to floats
 
 # NOTE fillna with lat/lon of city
 
-# Fill NaT values to company age at present
-df.age_at_exit = df.age_at_exit.dt.days # convert to floats
+
+# Drop any rows where ALL relevant info is NaN
+cols = ['acquired_at', 'age_at_acq', 'public_at', 'age_at_ipo', 'closed_at',
+       'age_at_close', 'milestones', 'latitude', 'longitude',
+       'offices', 'products', 'funding_rounds', 'investment_rounds',
+       'invested_companies', 'acq_before_acq', 'acq_before_ipo',
+       'acq_before_exit', 'investors', 'investors_per_round',
+       'funding_total_usd', 'funding_per_round', 'experience']
+df.dropna(axis=0, subset=cols, how='all', inplace=True)
+
+# Drop duplicates
+df.drop_duplicates(inplace=True)
+df = df[~df.index.duplicated(keep='first')]
 
 #------------------------------------------------------------------------------ 
 #        Create labels
 #------------------------------------------------------------------------------
 # What is a successful exit? acquisition or IPO BEFORE predefined time window
-# NOTE look at distribution of company age at exit before setting threshold
-# n_years = 6
-# threshold = n_years * 365
-
 std_ages = df.groupby('category_code').std().age_at_exit
 mean_ages = df.groupby('category_code').mean().age_at_exit
 threshold = mean_ages + 2*std_ages
@@ -265,32 +307,21 @@ df['threshold'] = np.nan
 for label in threshold.index:
     df.loc[df.category_code == label, 'threshold'] = threshold[label]
 
-# One-hot encode output for random forest
-df['success'] = False
-df['failure'] = False
-df.loc[df.status == 'acquired', 'success'] = True # Positive Examples
-df.loc[df.status == 'ipo', 'success'] = True
-df.loc[df.status == 'closed', 'failure'] = True # Obvious negative examples
-# Less obvious negative examples
+# Multi-classification labels
+df['label'] = np.nan
+# Failure
+df.loc[df.status == 'closed', 'label'] = 0
+# Success
+df.loc[(df.status == 'acquired') | (df.status == 'ipo'), 'label'] = 1
+# Operating, not likely to exit
 df.loc[(df.status == 'operating') 
-        & (df.age_at_exit > df.threshold), 'failure'] = True
- # Third class of pending
-# df.loc[(df.status == 'operating') & (df.age_at_exit < df.threshold),
-#        ['success', 'failure']] = [0, 0]
-
-# Also create labeled output 
-df['bin_label'] = False
-df.loc[ df.success & ~df.failure, 'bin_label'] = True
-df.loc[~df.success &  df.failure, 'bin_label'] = False
-df.loc[~df.success & ~df.failure, 'bin_label'] = False
-
-df['mul_label'] = 0
-df.loc[ df.success & ~df.failure, 'mul_label'] = 1
-df.loc[~df.success &  df.failure, 'mul_label'] = 0
-df.loc[~df.success & ~df.failure, 'mul_label'] = 2
+        & (df.age_at_exit >= df.threshold), 'label'] = 2
+# Operating, too early to tell?
+df.loc[(df.status == 'operating') 
+        & (df.age_at_exit < df.threshold), 'label'] = 3
 
 # Write final dataframe to csv
-filename = '../data/cb_input.pkl'
+filename = '../data/cb_input_multi.pkl'
 print('Writing features to \'{}\'...'.format(filename))
 df.to_pickle(filename)
 print('done.')

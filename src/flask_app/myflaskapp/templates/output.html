@@ -94,7 +94,7 @@
       with {{ probs_str }}% probability!</p>
       <p>The 5 most important features in the analysis were:</p>
       <table class="table table-hover">
-        <tr> <th>Feature</th> <th>Important</th> </tr>
+        <tr> <th>Feature</th> <th>Importance</th> </tr>
         {% for feat in fp[:5] %}
         <tr><td>{{ feat[0].replace('_', ' ') }}</td>
           <td>{{ "{:0.2f}%".format(100*feat[1]) }}</td>

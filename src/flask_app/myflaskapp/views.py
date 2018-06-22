@@ -17,8 +17,8 @@ from flask import request
 from bokeh.plotting import figure
 from bokeh.embed import components
 from bokeh.resources import INLINE
-# from bokeh.palettes import Dark2_5
-# import itertools
+from bokeh.palettes import Inferno
+import itertools
 
 import pandas as pd
 import numpy as np
@@ -49,31 +49,35 @@ def get_sim_idx(cid):
 #     """Get company index from name."""
 #     return df[df['name'] == company_name].index[0]
 
-# def color_gen():
-#     yield from itertools.cycle(Dark2_5[10])
+def color_gen():
+    yield from itertools.cycle(Inferno[8])
 
 def plot_timelines(sim_idx):
     """Plot funding timeline for each."""
     # create a new plot
-    p = figure(title='Company Funding Trajectories',
-               tools='pan, box_zoom, reset, save', 
+    p = figure(tools='pan, box_zoom, reset, save', 
                x_axis_label='Time [years]', 
-               y_axis_label='Funding Amt [\$]')
-    for i in sim_idx:
-        # color = color_gen()
-        the_co = fund_cv.loc[i].sort_values('funded_at')
+               y_axis_label='Funding Amt [$]')
+    colors = color_gen()
+    # TODO hover tips with series info + valuation
+    for i, color in zip(range(len(sim_idx)), colors):
+        s = sim_idx[i]
+        the_co = fund_cv.loc[s].sort_values('funded_at')
         # Add [0,0] point
         time_to_funding = pd.Series(0, index=[the_co.index[0]])\
                             .append(the_co.time_to_funding) / 365
         raised_amount_usd = pd.Series(0, index=[the_co.index[0]])\
                             .append(the_co.raised_amount_usd)
         p.line(time_to_funding, raised_amount_usd,
-               line_width=3, legend=df.loc[i, 'name'])
+               line_width=3, color=color, legend=df.loc[s, 'name'])
+        p.circle(time_to_funding, raised_amount_usd, 
+                 line_color=color, fill_color='white', size=8)
     return p
 
 # The home page
 @app.route('/')
 def endgame_input():
+    # TODO DROPDOWN MENU of possible options (autocomplete typing?)
     return render_template('index.html')
 
 # The good stuff
@@ -104,14 +108,17 @@ def endgame_output():
     # Get list of similar companies
     sim_idx = get_sim_idx(cid)
     comps = df.loc[sim_idx[1:], ['name', 'category_code', 'founded_at', 'status']]
+
     # Make plot!
-    plot = plot_timelines(sim_idx)
+    plot = plot_timelines(sim_idx[::-1])
     # grab the static resources
     js_resources = INLINE.render_js()
     css_resources = INLINE.render_css()
     # Embed plot into HTML via Flask Render
     script, div = components(plot)
-    return render_template('output.html', company_name=company_name,
+
+    # TODO fp needs better names, descriptions (footnotes?)
+    return render_template('output.html', company_name=company_name, fp=fp,
                            probs_str=probs_str, status=status, comps=comps,
                            plot_script=script, plot_div=div,
                            js_resources=js_resources,

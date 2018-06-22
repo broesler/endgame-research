@@ -13,8 +13,6 @@ import pandas as pd
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import rc as mplrc
-from mpl_toolkits.mplot3d import axes3d
 from scipy import interp
 import seaborn as sns
 
@@ -149,9 +147,10 @@ Xan = pd.DataFrame(data=Xan, columns=Xa.columns, index=Xa.index)
 pred = clf.predict(Xan)
 pred = pd.DataFrame(data=pred, index=Xan.index)
 pred_probas = clf.predict_proba(Xan)
+pred_probas = [pd.DataFrame(data=x, index=Xan.index) for x in pred_probas]
 
 # PICKLE ME
-pickle.dump([pred, pred_probas], open('../data/predictions.pkl', 'wb'))
+# pickle.dump([df, Xan, pred, pred_probas, fp], open('../data/predictions.pkl', 'wb'))
 # pred, pred_probas = pickle.load(open('../data/predictions.pkl', 'rb'))
 
 # Get most similar companies

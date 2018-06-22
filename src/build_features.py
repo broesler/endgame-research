@@ -20,7 +20,8 @@ engine = create_engine('mysql://bernie@localhost:5432/' + db_name)
 
 def sql2df(query, **kwargs):
     """Submit query to database and return dataframe with id as index."""
-    return pd.read_sql(query, con=engine, index_col='id', **kwargs)
+    # return pd.read_sql(query, con=engine, index_col='id', **kwargs)
+    return pd.read_sql(query, con=engine, **kwargs)
 
 #------------------------------------------------------------------------------ 
 #        Initialize
@@ -56,7 +57,7 @@ query = ('SELECT o.id, ' +
          'GROUP BY o.id')
 rf = sql2df(query, parse_dates=['acquir_at'])
 rf.columns = ['acquired_at'] # use better name
-df = df.join(rf, how='left')
+df = df.join(rf, on='id', how='left')
 df['age_at_acq'] = df.acquired_at - df.founded_at
 
 # 2b. # months company age at IPO: 
@@ -66,7 +67,7 @@ query = ('SELECT o.id, i.public_at ' +
          '  ON o.id = i.object_id ' +
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query, parse_dates=['public_at'])
-df = df.join(rf, how='left')
+df = df.join(rf, on='id', how='left')
 df['age_at_ipo'] = df.public_at - df.founded_at
 
 # 2c. # months company age close: 
@@ -74,7 +75,7 @@ query = ('SELECT o.id, o.closed_at ' +
          'FROM cb_objects AS o ' +
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query, parse_dates=['closed_at'])
-df = df.join(rf, how='left')
+df = df.join(rf, on='id', how='left')
 df['age_at_close'] = df.closed_at - df.founded_at
 
 # Consolidate ages into single column
@@ -93,7 +94,7 @@ query = ('SELECT o.id, ' +
 rf = sql2df(query)
 rf = rf.groupby('id').sum() # sum milestones completed
 rf.columns = ['milestones']
-df = df.join(rf, how='left')
+df = df.join(rf, on='id', how='left')
 
 # 8. Company Location
 # query = ('SELECT o.id, o.region ' +
@@ -111,7 +112,7 @@ query = ('SELECT o.id, l.latitude, l.longitude ' +
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query)
 rf = rf.groupby('id').first() # remove duplicate IDs (
-df = df.join(rf, how='left')
+df = df.join(rf, on='id', how='left')
 
 # 9. # offices: 
 query = ('SELECT o.id, ' +
@@ -122,7 +123,7 @@ query = ('SELECT o.id, ' +
          "WHERE o.entity_type = 'company' " +
          'GROUP BY o.id')
 rf = sql2df(query)
-df = df.join(rf, how='left')
+df = df.join(rf, on='id', how='left')
 
 # 10. # products: 
 query = ('SELECT o.id,  ' +
@@ -133,28 +134,28 @@ query = ('SELECT o.id,  ' +
          "WHERE o.entity_type = 'company' " +
          'GROUP BY o.id')
 rf = sql2df(query)
-df = df.join(rf, how='left')
+df = df.join(rf, on='id', how='left')
 
 # 12. # funding rounds: 
 query = ('SELECT o.id, o.funding_rounds ' +
          'FROM cb_objects AS o ' + 
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query)
-df = df.join(rf, how='left')
+df = df.join(rf, on='id', how='left')
 
 # 13a. # investment rounds by the company: 
 query = ('SELECT o.id, o.investment_rounds ' +
          'FROM cb_objects AS o ' +
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query)
-df = df.join(rf, how='left')
+df = df.join(rf, on='id', how='left')
 
 # 13b. # companies invested in by the company: 
 query = ('SELECT o.id, o.invested_companies ' +
          'FROM cb_objects AS o ' + 
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query)
-df = df.join(rf, how='left')
+df = df.join(rf, on='id', how='left')
 
 # 14. # acquisitions by the company:
 query = ('SELECT o.id, ' +
@@ -169,7 +170,7 @@ query = ('SELECT o.id, ' +
 rf = sql2df(query)
 rf = rf.groupby('id').sum(min_count=1) # sum milestones completed
 rf.columns = ['acq_before_acq']
-df = df.join(rf, how='left')
+df = df.join(rf, on='id', how='left')
 
 # 14b. # acquisitions by the company BEFORE IPO:
 query = ('SELECT o.id, ' +
@@ -182,7 +183,7 @@ query = ('SELECT o.id, ' +
          "WHERE o.entity_type = 'company' " +
          'GROUP BY o.id')
 rf = sql2df(query)
-df = df.join(rf, how='left')
+df = df.join(rf, on='id', how='left')
 
 # Consolidate acquisitions into single column
 df['acq_before_exit'] = df[['acq_before_acq', 'acq_before_ipo']].min(axis=1)
@@ -200,7 +201,7 @@ query = ('SELECT o.id,  ' +
          "WHERE b.entity_type = 'FinancialOrg' " +
          'GROUP BY o.id')
 rf = sql2df(query)
-df = df.join(rf, how='left')
+df = df.join(rf, on='id', how='left')
 
 # 18. # investors per round == # investors (15) / # funding rounds (13a)
 df['investors_per_round'] = df.investors / df.funding_rounds
@@ -210,7 +211,7 @@ query = ('SELECT o.id, o.funding_total_usd ' +
          'FROM cb_objects AS o ' + 
          "WHERE o.entity_type = 'company'")
 rf = sql2df(query)
-df = df.join(rf, how='left')
+df = df.join(rf, on='id', how='left')
 df['funding_per_round'] = df.funding_total_usd / df.funding_rounds
 
 # 19b. Time between rounds
@@ -224,10 +225,16 @@ WHERE f.raised_amount_usd IS NOT NULL
     AND TIMESTAMPDIFF(DAY, o.founded_at, f.funded_at) IS NOT NULL
 """
 rf = sql2df(query)
+# TODO Convert this line to ".diff().mean()"!!
+# Otherwise we're just getting an analagous value to age_at_exit
+# Probably need to NOT index by id since we get duplicates... just use integer
+# indexing to guarantee unique value, and then join(..., on='id')
+# Try this?? Need to get mean of diff...
+# rf['diff'] = rf.sort_values('funded_at').groupby('id').time_to_funding.diff()
 rf = rf.time_to_funding.groupby('id').mean()
 rf.name = 'avg_time_to_funding'
 rf = rf[rf >= 0] # eliminate negative numbers
-df = df.join(rf, how='inner')
+df = df.join(rf, on='id', how='inner')
 
 # Last funding round code
 query = """
@@ -241,7 +248,7 @@ WHERE o.founded_at IS NOT NULL
 """
 rf = sql2df(query)
 rf.columns = ['last_funding_round_code']
-df = df.join(rf, how='inner')
+df = df.join(rf, on='id', how='inner')
 
 # 20. founder experience
 query = ('SELECT o1.id, ' +
@@ -258,15 +265,15 @@ query = ('SELECT o1.id, ' +
          "      AND r1.title RLIKE 'founder|board|director'  " +
          'GROUP BY o1.id, o2.id')
 rf = sql2df(query, parse_dates=['earliest_start'])
-rf = rf.join(df.founded_at, how='left')
+rf = rf.join(df.founded_at, on='id', how='left')
 rf['experience'] = rf.founded_at - rf.earliest_start
 rf.loc[rf.experience < pd.Timedelta(0), 'experience'] = pd.NaT
 rf = rf.experience.dt.days.groupby('id').sum(min_count=1) # sum milestones completed
-df = df.join(rf, how='left')
+df = df.join(rf, on='id', how='left')
 
 # Add funding round code as categorical values
 dvs = pd.get_dummies(df.last_funding_round_code)
-df = df.join(dvs, how='inner')
+df = df.join(dvs, on='id', how='inner')
 
 #------------------------------------------------------------------------------ 
 #        Clean up
@@ -279,7 +286,6 @@ df.age_at_exit.fillna(value=(pd.Timestamp(TODAY) - df.founded_at), inplace=True)
 df.age_at_exit = df.age_at_exit.dt.days # convert to floats
 
 # NOTE fillna with lat/lon of city
-
 
 # Drop any rows where ALL relevant info is NaN
 cols = ['acquired_at', 'age_at_acq', 'public_at', 'age_at_ipo', 'closed_at',
@@ -321,9 +327,9 @@ df.loc[(df.status == 'operating')
         & (df.age_at_exit < df.threshold), 'label'] = 3
 
 # Write final dataframe to csv
-filename = '../data/cb_input_multi.pkl'
-print('Writing features to \'{}\'...'.format(filename))
-df.to_pickle(filename)
-print('done.')
+# filename = '../data/cb_input_multi_idcol.pkl'
+# print('Writing features to \'{}\'...'.format(filename))
+# df.to_pickle(filename)
+# print('done.')
 #==============================================================================
 #==============================================================================

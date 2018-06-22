@@ -98,39 +98,28 @@ df = df[df.id.isin(fund_cv.id.unique())]
 #------------------------------------------------------------------------------ 
 #        Prepare DataFrame for lifelines analysis
 #------------------------------------------------------------------------------
-# lf = to_long_format(df, 'age_at_exit')
-#
-# # Piped version (possibly faster?)
-# # lf = df.pipe(to_long_format, 'age_at_exit')\
-# #        .pipe(add_covariate_to_timeline(fund_cv_amt, 
-# #                                        'id', 'time_to_funding', 'success',
-# #                                        cumulative_sum=False)\
-#
-# # NOTE WARNING THIS LINE IS SUPER FUCKING SLOW.
-# # Add raised_amount_usd as time-varying covariate
-# fund_cv_amt = fund_cv[['id', 'raised_amount_usd', 'time_to_funding']]
-# lf = add_covariate_to_timeline(lf, fund_cv_amt, 'id', 'time_to_funding', 'success',
-#                                cumulative_sum=False)
-#
-# # Add cumulative funding as covariate
-# # lf = add_covariate_to_timeline(lf, fund_cv_amt, 
-# #                                'id', 'time_to_funding', 'success',
-# #                                cumulative_sum=True)
-# # Add funding round type as covariate
-#
-# # WRITE TO PICKLE FILE!!!
-# # lf.to_pickle('../data/survival_input.pkl')
-#
-# # df_t = fund_cv[fund_cv.name == 'Twitter']
-# # df_f = fund_cv[fund_cv.name == 'Facebook']
-# # fig = plt.figure(9)
-# # plt.clf()
-# # ax = plt.gca()
-# # plt.plot(df_t.time_to_funding, df_t.raised_amount_usd, '-xb', markersize=10)
-# # plt.plot(df_f.time_to_funding, df_f.raised_amount_usd, '-xr', markersize=10)
-# # ax.set_yscale('log')
-# # plt.tight_layout()
-# # plt.show()
-#
-# #==============================================================================
-# #==============================================================================
+lf = to_long_format(df, 'age_at_exit')
+
+# Piped version (possibly faster?)
+# lf = df.pipe(to_long_format, 'age_at_exit')\
+#        .pipe(add_covariate_to_timeline(fund_cv_amt, 
+#                                        'id', 'time_to_funding', 'success',
+#                                        cumulative_sum=False)\
+
+# NOTE WARNING THIS LINE IS SUPER FUCKING SLOW.
+# Add raised_amount_usd as time-varying covariate
+fund_cv_amt = fund_cv[['id', 'raised_amount_usd', 'time_to_funding']]
+lf = add_covariate_to_timeline(lf, fund_cv_amt, 'id', 'time_to_funding', 'success',
+                               cumulative_sum=False)
+
+# Add cumulative funding as covariate
+# lf = add_covariate_to_timeline(lf, fund_cv_amt, 
+#                                'id', 'time_to_funding', 'success',
+#                                cumulative_sum=True)
+# Add funding round type as covariate
+
+# WRITE TO PICKLE FILE!!!
+# lf.to_pickle('../data/survival_input.pkl')
+
+#==============================================================================
+#==============================================================================

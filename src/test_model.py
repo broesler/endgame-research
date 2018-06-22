@@ -155,9 +155,29 @@ pickle.dump([pred, pred_probas], open('../data/predictions.pkl', 'wb'))
 # pred, pred_probas = pickle.load(open('../data/predictions.pkl', 'rb'))
 
 # Get most similar companies
-# Xan = Xan[df.category_code == 'web']
-# C = cosine_similarity(Xan[ranked_features[0:3]])
-# C = pd.DataFrame(data=C, index=Xan.index, columns=Xan.index).abs()
+# cid = Xan.iloc[56].name # get index of company
+cid = 'c:12' # get index of Twitter
+Xi = Xan.loc[cid].values.reshape(1, -1) # single sample
+C = cosine_similarity(Xi, Xan)
+C = pd.DataFrame(data=C, columns=Xan.index).abs().T # column vector
+idx = C.values.argsort(axis=0).squeeze()[::-1] # array shape (m,) descending
+sim_idx = C.iloc[idx[0:6]].index
+# df.loc[sim_idx]
+
+# Need funding timeline for each...
+fund_cv = pickle.load(open('../data/funding.pkl', 'rb'))
+plt.figure(56)
+plt.clf()
+for i in sim_idx:
+    the_co = fund_cv.loc[i].sort_values('funded_at')
+    # Add [0,0] point
+    time_to_funding = pd.Series(0, index=[the_co.index[0]])\
+                        .append(the_co.time_to_funding)
+    raised_amount_usd = pd.Series(0, index=[the_co.index[0]])\
+                        .append(the_co.raised_amount_usd)
+    plt.plot(time_to_funding, raised_amount_usd,
+             '-x', markersize=8, lw=1, label=df.loc[i, 'name'])
+plt.legend()
 
 #------------------------------------------------------------------------------ 
 #        ROC Curves
@@ -224,7 +244,7 @@ plt.ylabel('True Positive Rate')
 plt.title('Multi-class Receiver Operating Characteristic')
 plt.legend()
 plt.tight_layout()
-plt.show()
+# plt.show()
 
 #==============================================================================
 #==============================================================================

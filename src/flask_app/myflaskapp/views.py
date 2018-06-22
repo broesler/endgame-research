@@ -20,6 +20,7 @@ from bokeh.resources import INLINE
 from bokeh.palettes import Inferno
 import itertools
 
+import json
 import pandas as pd
 import numpy as np
 import pickle
@@ -33,6 +34,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 data_path = './data/'
 df, Xan, pred, pred_probas, fp = pickle.load(open(data_path+'predictions.pkl', 'rb'))
 fund_cv = pickle.load(open(data_path+'funding.pkl', 'rb'))
+# List of company names for autocompletion
+company_names = json.dumps(list(df.name.values))
 
 def get_sim_idx(cid):
     """Get indices of most similar companies."""
@@ -45,9 +48,12 @@ def get_sim_idx(cid):
     return sim_idx
     # df.loc[sim_idx]
 
-# def get_company_id(company_name):
-#     """Get company index from name."""
-#     return df[df['name'] == company_name].index[0]
+def get_company_id(company_name):
+    """Get company index from name."""
+    try:
+        return df[df['name'] == company_name].index[0]
+    except IndexError as e:
+        return render_template('500.html', error=e)
 
 def color_gen():
     yield from itertools.cycle(Inferno[8])
@@ -74,21 +80,20 @@ def plot_timelines(sim_idx):
                  line_color=color, fill_color='white', size=8)
     return p
 
+#------------------------------------------------------------------------------ 
+#        Define the pages
+#------------------------------------------------------------------------------
 # The home page
 @app.route('/')
 def endgame_input():
-    # TODO DROPDOWN MENU of possible options (autocomplete typing?)
-    return render_template('index.html')
+    return render_template('index.html', company_names=company_names)
 
 # The good stuff
 @app.route('/output')
 def endgame_output():
+
     company_name = request.args.get('company_name')
-    # cid = get_company_id(company_name)
-    try:
-        cid = df[df['name'] == company_name].index[0]
-    except IndexError as e:
-        return render_template('500.html', error=e)
+    cid = get_company_id(company_name)
 
     # Get prediction class and probability
     pred_class = pred.loc[cid].idxmax() # [0, 1, 2, 3]
@@ -119,9 +124,9 @@ def endgame_output():
 
     # TODO fp needs better names, descriptions (footnotes?)
     return render_template('output.html', company_name=company_name, fp=fp,
-                           probs_str=probs_str, status=status, comps=comps,
-                           plot_script=script, plot_div=div,
-                           js_resources=js_resources,
+                           company_names=company_names, probs_str=probs_str,
+                           status=status, comps=comps, plot_script=script,
+                           plot_div=div, js_resources=js_resources,
                            css_resources=css_resources)
 
 #==============================================================================

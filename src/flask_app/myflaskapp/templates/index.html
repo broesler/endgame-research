@@ -33,29 +33,7 @@
   </head>
 
   <body>
-
-    <!-- <nav class="navbar navbar&#45;inverse navbar&#45;fixed&#45;top"> -->
-    <!--   <div class="container"> -->
-    <!--     <div class="navbar&#45;header"> -->
-    <!--       <button type="button" class="navbar&#45;toggle collapsed" data&#45;toggle="collapse" data&#45;target="#navbar" aria&#45;expanded="false" aria&#45;controls="navbar"> -->
-    <!--         <span class="sr&#45;only">Toggle navigation</span> -->
-    <!--         <span class="icon&#45;bar"></span> -->
-    <!--         <span class="icon&#45;bar"></span> -->
-    <!--         <span class="icon&#45;bar"></span> -->
-    <!--       </button> -->
-    <!--       <a class="navbar&#45;brand" href="#">Menu</a> -->
-    <!--     </div> -->
-    <!--     <div id="navbar" class="collapse navbar&#45;collapse"> -->
-    <!--       <ul class="nav navbar&#45;nav"> -->
-    <!--         <li class="active"><a href="#">Home</a></li> -->
-    <!--         <li><a href="#about">About</a></li> -->
-    <!--         <li><a href="#contact">Contact</a></li> -->
-    <!--       </ul> -->
-    <!--     </div><!&#45;&#45;/.nav&#45;collapse &#45;&#45;> -->
-    <!--   </div> -->
-    <!-- </nav> -->
-
-  <br></br>
+    <br></br>
 
     <div class="container">
 
@@ -65,25 +43,29 @@
       </div>
 
       <div class = "container">
-
+        <!--Make sure the form has the autocomplete function switched off:-->
+        <!-- <form action="/output" method="GET" autocomplete="off"> -->
         <form action="/output" method="GET">
           <div class="form-group">
-            <label for="company_name">Company Name:</label>
-            <input type="text" id="company_name" name='company_name' placeholder="e.g. Twitter">
+              <label for="company_name">Company Name:</label>
+              <input type="text" id="company_name" name='company_name' placeholder="e.g. Twitter">
           </div>
 
           <div>
             <button type="submit" class="btn btn-default btn-lg">Go!</button>
           </div>
-
         </form>
       </div>
 
       <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
       <script src="static/js/bootstrap.min.js"></script>
-
     </div> <!-- /.container-->
 
+    <!-- Set up autocomplete variable of company names -->
+    <script type="text/javascript">
+      var company_names = {{ company_names|safe }}
+    </script>
+    <script type="text/javascript" src="static/js/autocomplete.js"></script>
 
     <!-- Bootstrap core JavaScript
     ================================================== -->

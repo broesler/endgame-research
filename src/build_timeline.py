@@ -18,10 +18,21 @@ from sqlalchemy import create_engine
 db_name = 'crunchbase_db'
 engine = create_engine('mysql://bernie@localhost:5432/' + db_name)
 
-def sql2df(query, **kwargs):
+def sql2df(query, dates=False, **kwargs):
     """Submit query to database and return dataframe with id as index."""
-    # return pd.read_sql(query, con=engine, index_col='id', **kwargs)
-    return pd.read_sql(query, con=engine, **kwargs)
+    if dates:
+        return pd.read_sql(query, con=engine, parse_dates=['dates'], **kwargs)
+    else:
+        return pd.read_sql(query, con=engine, **kwargs)
+
+def append_to_timeline(tf, rf):
+    """ Append frame on right using only ids of frame on left.
+
+    Ensure that we don't add rows for events that did not occur for a given
+    company.
+    """
+    return tf.append(rf.loc[rf.id.isin(tf.id) & rf.dates.notnull()],
+                     ignore_index=True)
 
 #------------------------------------------------------------------------------ 
 #        Initialize
@@ -35,12 +46,12 @@ SELECT o.id,
        o.name,  
        o.category_code,  
        o.status,
-       o.founded_at
+       o.founded_at AS dates
 FROM cb_objects AS o 
 WHERE o.entity_type = 'company' 
     AND o.founded_at IS NOT NULL
 """
-df = sql2df(query, parse_dates=['founded_at'])
+df = sql2df(query, dates=True)
 
 # NOTE status \in {'operating', 'acquired', 'ipo', 'closed'}
 
@@ -88,46 +99,99 @@ df = df.merge(rf, on='id', how='left')
 #------------------------------------------------------------------------------ 
 #        Build Timeline dataframe
 #------------------------------------------------------------------------------
-tf = df[['id', 'founded_at']].copy()
-tf.rename(columns={'founded_at':'dates'}, inplace=True)
+tf = df[['id', 'dates']].copy()
 tf['event_id'] = 'founded'
-tf['time_to_event'] = 0
 
 # Funding rounds
 query = """
 SELECT o.id,
-       f.funded_at AS dates,
-       TIMESTAMPDIFF(DAY, o.founded_at, f.funded_at) AS time_to_event
+       f.funded_at AS dates
 FROM cb_objects AS o 
 JOIN cb_funding_rounds AS f 
 ON o.id = f.object_id
 WHERE TIMESTAMPDIFF(DAY, o.founded_at, f.funded_at) IS NOT NULL
 """
-rf = sql2df(query, parse_dates=['dates'])
+rf = sql2df(query, dates=True)
 rf['event_id'] = 'funded'
 
 # Append events to timeline (essentially an inner join with newest data)
 tf = tf[tf.id.isin(rf.id)].append(rf, ignore_index=True)
 
-# TEST CODE:
-# test_tf = tf[(tf.id == 'c:12') | (tf.id == 'c:126')].copy()
-# test_g = test_tf.sort_values('dates').groupby(['id', 'event_id'])
-# test_tf['event_count'] = test_g.cumcount() + 1
-# test_tf['time_diff'] = test_g.time_to_event.diff()
-# # Replace first diff NaN with initial time_to_funding value (diff with 0)
-# test_tf.loc[test_tf.time_diff.isnull(), 'time_diff'] = test_tf.time_to_event
-# test_tf = test_tf[(test_tf.time_diff >= 0) & (test_tf.time_to_event >= 0)] # only positive values
-# # print(test_tf.sort_values(['id', 'time_to_event']))
-# # print(tf.sort_values(['id', 'time_to_event']))
+# company age at acquisition
+query = """
+SELECT o.id,
+       MIN(a.acquired_at) AS dates
+FROM cb_objects AS o 
+JOIN cb_acquisitions AS a 
+  ON o.id = a.acquired_object_id 
+WHERE o.entity_type = 'company' 
+GROUP BY o.id
+"""
+rf = sql2df(query, dates=True)
+rf['event_id'] = 'acquired'
+tf = append_to_timeline(tf, rf)
+
+# company age at IPO: 
+query = """
+SELECT o.id, 
+       i.public_at AS dates
+FROM cb_objects AS o 
+JOIN cb_ipos AS i 
+  ON o.id = i.object_id 
+WHERE o.entity_type = 'company'
+"""
+rf = sql2df(query, dates=True)
+rf['event_id'] = 'public'
+tf = append_to_timeline(tf, rf)
+
+# company age at close: 
+query = """
+SELECT o.id, 
+       o.closed_at AS dates
+FROM cb_objects AS o 
+WHERE o.entity_type = 'company'
+"""
+rf = sql2df(query, dates=True)
+rf['event_id'] = 'closed'
+tf = append_to_timeline(tf, rf)
+
+#------------------------------------------------------------------------------ 
+#        Add timing features for all events
+#------------------------------------------------------------------------------
+# Get time_to_event for each group
+def get_time_to(group):
+    """Get time to event from founding date given a group."""
+    founded_at = group.loc[group.event_id == 'founded'].dates.values[0]
+    group['time_to_event'] = group.dates - founded_at
+    return group
+tf = tf.groupby('id').apply(get_time_to)
 
 # Event count and time between events
 g = tf.sort_values('dates').groupby(['id', 'event_id'])
 tf['event_count'] = g.cumcount() + 1
-tf['time_diff'] = g.time_to_event.diff()
-# Replace first diff NaN with initial time_to_funding value (diff with 0)
-tf.loc[tf.time_diff.isnull(), 'time_diff'] = tf.time_to_event
-tf = tf[(tf.time_diff >= 0) & (tf.time_to_event >= 0)] # only positive values
 
+# Calculate time between events
+tf['time_diff'] = g.time_to_event.diff()
+# Replace diff NaN with initial time_to_funding value (diff with 0)
+tf.loc[tf.time_diff.isnull(), 'time_diff'] = tf.time_to_event
+
+# NOTE this line may eliminate NaN values unintentionally:
+# Get rid of negative times (<1% of rows)
+tf = tf[(tf.time_diff >= pd.Timedelta(0)) 
+        & (tf.time_to_event >= pd.Timedelta(0))]
+
+# Test subset:
+test_tf = tf[(tf.id == 'c:12') | (tf.id == 'c:126')].copy()
+# test_g = test_tf.sort_values('dates').groupby(['id', 'event_id'])
+# print(test_tf.sort_values(['id', 'time_to_event']))
+
+# Reset index to (id, integer)
+# test_tf = test_tf.sort_values(['id', 'time_to_event'])\
+#                  .set_index(['id', test_tf.index])
+
+#------------------------------------------------------------------------------ 
+#        Other features to add
+#------------------------------------------------------------------------------
 # # milestones on CrunchBase profile (i.e. Facebook added newsfeed): 
 # query = """
 # SELECT o.id,
@@ -178,44 +242,6 @@ tf = tf[(tf.time_diff >= 0) & (tf.time_to_event >= 0)] # only positive values
 # rf['tot_aamt'] = rf.sort_values('acquired_at').groupby('id').price_amount.cumcount()
 # rf.rename({'acquired_at':'made_acq_at'}, inplace=True)
 # df = df.merge(rf, on='id', how='left')
-#
-# # company age at acquisition
-# query = """
-# SELECT o.id,
-#        MIN(a.acquired_at) AS acquir_at 
-# FROM cb_objects AS o 
-# JOIN cb_acquisitions AS a 
-#   ON o.id = a.acquired_object_id 
-# WHERE o.entity_type = 'company' 
-# GROUP BY o.id
-# """
-# rf = sql2df(query, parse_dates=['acquir_at'])
-# rf.columns = ['id', 'acquired_at'] # use better name
-# df = df.merge(rf, on='id', how='left')
-#
-# # company age at IPO: 
-# query = """
-# SELECT o.id, i.public_at
-# FROM cb_objects AS o 
-# JOIN cb_ipos AS i 
-#   ON o.id = i.object_id 
-# WHERE o.entity_type = 'company'
-# """
-# rf = sql2df(query, parse_dates=['public_at'])
-# df = df.merge(rf, on='id', how='left')
-#
-# # company age at close: 
-# query = """
-# SELECT o.id, o.closed_at
-# FROM cb_objects AS o 
-# WHERE o.entity_type = 'company'
-# """
-# rf = sql2df(query, parse_dates=['closed_at'])
-# df = df.merge(rf, on='id', how='left')
-#
-# # Consolidate ages into single column
-# df['end_at'] = df[['acquired_at', 'public_at', 'closed_at']].min(axis=1)
-# df['age_at_end'] = df.end_at - df.founded_at
 #
 # # 15. # VC and PE firms investing in the company (total):
 # query = """

@@ -107,15 +107,26 @@ rf = sql2df(query, parse_dates=['dates'])
 rf['event_id'] = 'funded'
 
 # Append events to timeline (essentially an inner join with newest data)
-tf = tf[tf.id.isin(rf.id)].append(rf)
+tf = tf[tf.id.isin(rf.id)].append(rf, ignore_index=True)
 
-# # Event count and time between events
-# gb = tf.sort_values('dates').groupby(['id', 'event_id'])
-# tf['event_count'] = gb.cumcount() + 1
-# tf['time_diff'] = gb.time_to_event.diff()
+# TEST CODE:
+# test_tf = tf[(tf.id == 'c:12') | (tf.id == 'c:126')].copy()
+# test_g = test_tf.sort_values('dates').groupby(['id', 'event_id'])
+# test_tf['event_count'] = test_g.cumcount() + 1
+# test_tf['time_diff'] = test_g.time_to_event.diff()
 # # Replace first diff NaN with initial time_to_funding value (diff with 0)
-# tf.loc[tf.time_diff.isnull(), 'time_diff'] = tf.time_to_event
-# tf = tf[(tf.time_diff > 0) & (tf.time_to_event > 0)] # only positive values
+# test_tf.loc[test_tf.time_diff.isnull(), 'time_diff'] = test_tf.time_to_event
+# test_tf = test_tf[(test_tf.time_diff >= 0) & (test_tf.time_to_event >= 0)] # only positive values
+# # print(test_tf.sort_values(['id', 'time_to_event']))
+# # print(tf.sort_values(['id', 'time_to_event']))
+
+# Event count and time between events
+g = tf.sort_values('dates').groupby(['id', 'event_id'])
+tf['event_count'] = g.cumcount() + 1
+tf['time_diff'] = g.time_to_event.diff()
+# Replace first diff NaN with initial time_to_funding value (diff with 0)
+tf.loc[tf.time_diff.isnull(), 'time_diff'] = tf.time_to_event
+tf = tf[(tf.time_diff >= 0) & (tf.time_to_event >= 0)] # only positive values
 
 # # milestones on CrunchBase profile (i.e. Facebook added newsfeed): 
 # query = """

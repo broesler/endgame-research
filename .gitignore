@@ -1,3 +1,4 @@
 data/
 *.map
 *.ipynb_checkpoints
+.nosync

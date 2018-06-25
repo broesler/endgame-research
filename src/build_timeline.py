@@ -9,6 +9,7 @@
 """
 #==============================================================================
 
+import pickle
 import pandas as pd
 import numpy as np
 
@@ -175,10 +176,15 @@ tf['time_diff'] = g.time_to_event.diff()
 # Replace diff NaN with initial time_to_funding value (diff with 0)
 tf.loc[tf.time_diff.isnull(), 'time_diff'] = tf.time_to_event
 
+# Convert to floats
+tf.time_diff = tf.time_diff.dt.days
+tf.time_to_event = tf.time_to_event.dt.days
+
 # NOTE this line may eliminate NaN values unintentionally:
 # Get rid of negative times (<1% of rows)
-tf = tf[(tf.time_diff >= pd.Timedelta(0)) 
-        & (tf.time_to_event >= pd.Timedelta(0))]
+# tf = tf[(tf.time_diff >= pd.Timedelta(0)) 
+#         & (tf.time_to_event >= pd.Timedelta(0))]
+tf = tf[(tf.time_diff >= 0) & (tf.time_to_event >= 0)]
 
 # Test subset:
 test_tf = tf[(tf.id == 'c:12') | (tf.id == 'c:126')].copy()
@@ -355,10 +361,14 @@ test_tf = tf[(tf.id == 'c:12') | (tf.id == 'c:126')].copy()
 # df.loc[(df.status == 'operating') 
 #         & (df.age_at_exit < df.threshold), 'label'] = 3
 #
-# # Write final dataframe to csv
-# filename = '../data/cb_input_multi_idcol.pkl'
-# print('Writing features to \'{}\'...'.format(filename))
-# df.to_pickle(filename)
-# print('done.')
-# #==============================================================================
-# #==============================================================================
+
+# Filter df to match indices of tf (save space!)
+df = df[df.id.isin(tf.id)]
+
+# Write final dataframe to csv
+filename = '../data/cb_input_datasets.pkl'
+print('Writing features to \'{}\'...'.format(filename))
+pickle.dump([tf, df], open(filename, 'wb'))
+print('done.')
+#==============================================================================
+#==============================================================================

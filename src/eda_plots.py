@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
 import seaborn as sns
 
-save_flag = 1
+save_flag = 0
 fig_dir = '../figures/'
 fig_ext = '.png'
 

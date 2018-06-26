@@ -38,8 +38,6 @@ def append_to_timeline(tf, rf):
 #------------------------------------------------------------------------------ 
 #        Initialize
 #------------------------------------------------------------------------------
-# TODAY = '2013/12/12' # date of snapshot YYYY/MM/DD
-TODAY = '2014/01/10' # most recent founded_at date
 
 # Initial DataFrame of ALL companies with at least one data point
 query = """
@@ -57,7 +55,7 @@ df = sql2df(query, dates=True)
 # NOTE status \in {'operating', 'acquired', 'ipo', 'closed'}
 
 #------------------------------------------------------------------------------ 
-#        Get static features
+#        Static features (don't change after founding)
 #------------------------------------------------------------------------------
 # Company Location -- (latitude, longitude)
 query = """
@@ -96,6 +94,29 @@ GROUP BY o.id
 """
 rf = sql2df(query)
 df = df.merge(rf, on='id', how='left')
+
+# # founder experience
+# query = """
+# SELECT o1.id,
+#        o2.id AS employee,         
+#        MIN(r2.start_at) as earliest_start 
+# FROM cb_objects AS o1
+# JOIN cb_relationships AS r1
+#   ON o1.id = r1.relationship_object_id
+# JOIN cb_objects AS o2  
+#   ON r1.person_object_id = o2.id
+# JOIN cb_relationships AS r2  
+#   ON o2.id = r2.person_object_id  
+# WHERE o1.entity_type = 'company'
+#     AND r1.title RLIKE 'founder|board|director'
+# GROUP BY o1.id, o2.id
+# """
+# rf = sql2df(query, parse_dates=['earliest_start'])
+# rf = rf.merge(df.dates, on='id', how='left')
+# rf['experience'] = rf.dates - rf.earliest_start
+# rf.loc[rf.experience < pd.Timedelta(0), 'experience'] = pd.NaT
+# rf = rf.experience.dt.days.groupby('id').sum(min_count=1).reset_index()
+# df = df.merge(rf, on='id', how='left')
 
 #------------------------------------------------------------------------------ 
 #        Build Timeline dataframe
@@ -281,29 +302,6 @@ test_tf = tf[(tf.id == 'c:12') | (tf.id == 'c:126')].copy()
 # """
 # rf = sql2df(query)
 # rf.columns = ['id', 'last_funding_round_code']
-# df = df.merge(rf, on='id', how='left')
-#
-# # 20. founder experience
-# query = """
-# SELECT o1.id,
-#        o2.id AS employee,         
-#        MIN(r2.start_at) as earliest_start 
-# FROM cb_objects AS o1
-# JOIN cb_relationships AS r1
-#   ON o1.id = r1.relationship_object_id
-# JOIN cb_objects AS o2  
-#   ON r1.person_object_id = o2.id
-# JOIN cb_relationships AS r2  
-#   ON o2.id = r2.person_object_id  
-# WHERE o1.entity_type = 'company'
-#     AND r1.title RLIKE 'founder|board|director'
-# GROUP BY o1.id, o2.id
-# """
-# rf = sql2df(query, parse_dates=['earliest_start'])
-# rf = rf.merge(df.founded_at, on='id', how='left')
-# rf['experience'] = rf.founded_at - rf.earliest_start
-# rf.loc[rf.experience < pd.Timedelta(0), 'experience'] = pd.NaT
-# rf = rf.experience.dt.days.groupby('id').sum(min_count=1).reset_index()
 # df = df.merge(rf, on='id', how='left')
 #
 # # Add funding round code as categorical values

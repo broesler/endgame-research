@@ -25,12 +25,17 @@ from sklearn.utils import resample
 
 from sklearn.metrics.pairwise import cosine_similarity
 
-from build_features import make_labels
+from timeline_funcs import make_labels, make_features_dict
 
 # Equivalent to "shortg" Matlab format
 np.set_printoptions(precision=4, suppress=True)
 
+save_flag = 1
+fig_dir = '../figures/'
+fig_ext = '.png'
+
 plt.ion()
+plt.close('all')
 
 #------------------------------------------------------------------------------ 
 #        IMPORT THE DATA!!
@@ -43,47 +48,66 @@ feat_cols = ['milestones', 'latitude', 'longitude', 'offices', 'products',
              # 'investors', 'investors_per_round', 'funding_per_round',
              # 'avg_time_to_funding', 'experience']
 
-classes = ['Failed', 'Timely Exit', 'Late Exit']
+classes = ['Failed', 'Timely Exit', 'Late Exit', 'Slow Growth', 'Unknown']
 
 #------------------------------------------------------------------------------ 
 #        Train/Test Split Timeseries
 #------------------------------------------------------------------------------
+# TODAY = '2013/12/12' # date of snapshot YYYY/MM/DD
+TODAY = tf.dates.max() # most recent date in timeline
+
+# mean time threshold to acquisition (all industries) is 12 years
+TEST_WINDOW = pd.to_timedelta(6, unit='y')
+TRAIN_END = TODAY - TEST_WINDOW
+
 # Split values in time
 X = tf.sort_values('dates')
-tscv = TimeSeriesSplit(n_splits=2)
-i = 0
-for train_idx, test_idx in tscv.split(X):
-    tf_train = X.iloc[train_idx]
-    tf_test = X.iloc[test_idx]
 
-    # Get corresponding static data
-    df_train = df[df.id.isin(tf_train.id)]
-    df_test = df[df.id.isin(tf_test.id)]
+# NOTE train using limited dataset, then test using rest of data (which will
+# give future of companies founded within `threshold` years of the cutoff), but
+# caveat to typical TimeSeriesSplit: we need to retain ALL of the history for
+# the test set to properly build the features (not just the chunk of time
+# between TRAIN_END and TODAY)
+tf_train = X.loc[X.dates < TRAIN_END]
+tf_test = X
 
-    # X_train = build_features(tf_train, df_train)
-    # X_test = build_features(tf_test, df_test)
+# Get corresponding static data
+df_train = df[df.id.isin(tf_train.id)]
+df_test = df[df.id.isin(tf_test.id)]
 
-    # Label data
-    y_train = make_labels(tf_train, df_train)
-    # y_test = make_labels(tf_test, df_test)
+# Label data
+y_train = make_labels(tf_train, df_train)
+y_test = make_labels(tf_test, df_test)
 
-    i += 1
-    if i == 2:
-        break # just run once for testing
+# Based on labels, need to build features comparing EVERY un-labeled company
+# with every labeled company (i.e. cosine similarity), BUT, we need to cut off
+# the `time_to_event` threshold for each comparison. We are building a matrix:
+#   X : (n, m) for n unknown companies and m labeled companies
+# where the (i, j)th entry is the similarity between the ith unknown company
+# and the jth labeled company.
 
-# >>> y_train.label.value_counts()
-# 3.0    12964
-# 1.0      326
-# 0.0       73
-# 2.0       54
-# Name: label, dtype: int64
-# >>> y_train.label.value_counts() / y_train.shape[0]
-# 3.0    0.966237
-# 1.0    0.024298
-# 0.0    0.005441
-# 2.0    0.004025
-# Name: label, dtype: float64
+F_train = make_features_dict(tf_train, df_train, y_train)
 
+# Simplest model:
+# Split out unknown and get similarity
+# x = F_aug.loc[F_aug.id == ul].copy() # (m, 1) features of unknown company
+# F = F_aug.loc[F_aug.id != ul].copy() # (Nl, m) features of labeled companies
+# C[ul] = similarity(x[feat_cols], F[feat_cols]) # (m, 1) similarity vector
+
+# To predict: use k-NN classification
+
+# Plots!
+fig = plt.figure(1)
+plt.clf()
+ax = plt.gca()
+ax.bar(x=classes, height=y_test.label.value_counts().loc[np.arange(5)],
+        color=['C3', 'C2', 'C1', 'C0', 'C4'])
+# ax.set_aspect('equal')
+# plt.legend(classes, bbox_to_anchor=(1.05, 1), loc=2)
+ax.set_ylabel('Number of companies')
+plt.tight_layout()
+if save_flag:
+    plt.savefig(fig_dir + 'class_values' + fig_ext)
 
 #------------------------------------------------------------------------------ 
 #        Upsample minority classes

@@ -12,15 +12,12 @@
     <title>Results | EndGame</title>
 
     <!-- Bootstrap core CSS -->
-    <!-- <link href="../../dist/css/bootstrap.min.css" rel="stylesheet"> -->
-    <!-- <link href="../static/css/bootstrap.min.css" rel="stylesheet"> -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
 
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
     <link href="../../assets/css/ie10-viewport-bug-workaround.css" rel="stylesheet">
 
     <!-- Custom styles for this template -->
-    <!-- <link href="starter&#45;template.css" rel="stylesheet"> -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/starter-template.css') }}">
 
     <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
@@ -88,7 +85,7 @@
       </div>
 
       <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
-      <script src="static/js/bootstrap.min.js"></script>
+      <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
     </div> <!-- /.container-->
 
   <br></br>
@@ -133,7 +130,6 @@
       </table>
 
       <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
-      <!-- <script src="static/js/bootstrap.min.js"></script> -->
       <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
      </div><!-- /.container -->
 
@@ -151,17 +147,15 @@
     <script type="text/javascript">
       var company_names = {{ company_names|safe }}
     </script>
-    <!-- <script type="text/javascript" src="static/js/autocomplete.js"></script> -->
     <script type="text/javascript" src="{{ url_for('static', filename='js/autocomplete.js') }}"></script>
 
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-    <!-- <script src="static/js/bootstrap.min.js"></script> -->
     <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
     <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
-    <!-- <script src="../../dist/js/bootstrap.min.js"></script> -->
+    <script src="../../dist/js/bootstrap.min.js"></script>
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
     <script src="../../assets/js/ie10-viewport-bug-workaround.js"></script>
   </body>

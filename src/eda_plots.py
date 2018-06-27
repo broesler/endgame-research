@@ -10,6 +10,7 @@
 #==============================================================================
 
 import pandas as pd
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
@@ -21,7 +22,7 @@ fig_ext = '.png'
 
 plt.close('all')
 sns.set_style('whitegrid')
-sns.set_context('poster')
+sns.set_context('poster', font_scale=1.6)
 
 np.set_printoptions(precision=4, suppress=True) # "shortg" Matlab format
 plt.ion()
@@ -39,8 +40,7 @@ feat_cols = ['age_at_exit', 'milestones', 'latitude', 'longitude', 'offices',
 #              'partial', 'post_ipo_debt', 'post_ipo_equity', 'private_equity',
 #              'secondary_market', 'seed', 'unattributed']
 
-classes = ['Failed', 'Timely Exit', 'Late Exit', 'Steady Operation']
-colors = ['C3', 'C2', 'C1', 'C0']
+classes = ['Failed', 'Timely Exit', 'Late Exit', 'Slow Growth']
 
 df['age_at_exit_years'] = df.age_at_exit / 365
 
@@ -51,18 +51,36 @@ y = df.label
 #------------------------------------------------------------------------------
 plt.figure(1, figsize=(11, 9))
 plt.clf()
-to_plot = ['web', 'transportation', 'health'] # select categories
+to_plot = ['web', 'health', 'hardware'] # select categories
+df_ages = df[(y == 1) 
+             & (df.category_code.isin(to_plot)) 
+             & (df.age_at_exit_years >= 0)]
 g = sns.boxplot(y='category_code', 
                 x='age_at_exit_years', 
-                data=df[(y == 1) & (df.category_code.isin(to_plot))])
+                data=df_ages)
 plt.title('Age at Exit (Acquisition or IPO)')
 plt.xticks(rotation=70)
 g.set_xlabel('Age (years)')
 g.set_ylabel('Industry')
-# g.set_xlim([0, 50])
+g.set_xlim([0, 30])
 plt.tight_layout()
 if save_flag:
     plt.savefig(fig_dir + 'age_at_exit_success' + fig_ext)
+
+# Plots!
+y_test = pickle.load(open('../data/y_labels_median_0std.pkl', 'rb'))
+sns.set_context('poster')
+fig = plt.figure(2)
+plt.clf()
+ax = plt.gca()
+ax.bar(x=classes, height=y_test.label.value_counts().loc[np.arange(4)],
+        color=['C3', 'C2', 'C1', 'C0'])
+# ax.set_aspect('equal')
+# plt.legend(classes, bbox_to_anchor=(1.05, 1), loc=2)
+ax.set_ylabel('Number of companies')
+plt.tight_layout()
+if save_flag:
+    plt.savefig(fig_dir + 'class_values' + fig_ext)
 
 # plt.figure(2, figsize=(11, 9))
 # plt.clf()

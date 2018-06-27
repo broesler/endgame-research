@@ -16,12 +16,14 @@ from sklearn.preprocessing import StandardScaler, label_binarize
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics import precision_recall_fscore_support
+from sklearn.metrics import classification_report
 from sklearn.utils import resample
 
 feat_cols = ['latitude', 'longitude', 'offices', 'products',
              'mean_fund_time', 'funding_rounds']
 
-classes = ['Failed', 'Timely Exit', 'Late Exit', 'Slow Growth', 'Unknown']
+classes = ['Failed', 'Timely Exit', 'Late Exit', 'Slow Growth']
 
 MAX_COUNT = 100
 
@@ -35,7 +37,7 @@ def make_labels(tf, df):
     y.loc[y.id.isin(closures.id), 'label'] = 0
 
     # What is a successful exit? 
-    # "Exit" == acquisition or IPO at least before 1-std beyond mean age of
+    # "Exit" == acquisition or IPO before median age of
     # acquisition for a given industry
     # NOTE workaround: groupby().std() does NOT work on timeseries64, but
     # describe() does!?
@@ -60,14 +62,14 @@ def make_labels(tf, df):
     y.loc[y.id.isin(timely_exits.id), 'label'] = 1
 
     # Companies that have exited, but beyond the threshold
-    slow_exits = exits.loc[exits.time_to_event >= exits.threshold]
-    y.loc[y.id.isin(slow_exits.id), 'label'] = 2
+    late_exits = exits.loc[exits.time_to_event >= exits.threshold]
+    y.loc[y.id.isin(late_exits.id), 'label'] = 2
 
     # Companies who are beyond threshold, but haven't exited or closed
     dinosaurs = others.loc[others.time_to_event >= others.threshold]
     y.loc[y.id.isin(dinosaurs.id), 'label'] = 3
 
-    # Everything else is 'unknown'
+    # Everything else is a "young company"
     y.fillna(value=4, inplace=True)
 
     return y
@@ -170,6 +172,8 @@ def train_and_predict(X_in, y_in, unlabeled_ids, clf=None):
     # C = {}
     pred = pd.DataFrame()
     score = pd.Series()
+    fm = pd.Series()
+    f1 = pd.DataFrame()
     count = 0
 
     if clf is None:
@@ -191,25 +195,7 @@ def train_and_predict(X_in, y_in, unlabeled_ids, clf=None):
         # sim_idx = C[ul].iloc[idx[0:6]].index
         # pred[ul] = y_in.loc[sim_idx[0]]
 
-        # Upsample minority classes
-        X_maj = X.loc[y_in.label == 3] # majority (y_in.label.value_counts())
-        y_maj = yb.loc[y_in.label == 3]
-        X_min_u = []
-        y_min_u = []
-        for i in range(3):
-            # Upsample minority class
-            X_min_u.append(resample(X.loc[y_in.label == i], 
-                                replace=True, 
-                                n_samples=X_maj.shape[0],
-                                random_state=56))
-            y_min_u.append(resample(yb.loc[y_in.label == i], 
-                                replace=True, 
-                                n_samples=X_maj.shape[0],
-                                random_state=56))
-
-        # Combine majority class with upsampled minority class
-        X = pd.concat([X_maj] + X_min_u)
-        y = pd.concat([y_maj] + y_min_u)
+        X, y = upsample_minority(X, y_in, yb, min_lab=3)
 
         # Don't use "train", "test" here to avoid over-writing previous time break
         X_tr, X_t, y_tr, y_t = train_test_split(X, y, train_size=0.6, 
@@ -221,15 +207,48 @@ def train_and_predict(X_in, y_in, unlabeled_ids, clf=None):
         clf.fit(X_tr, y_tr)
 
         # Mean accuracy over all classes
-        score = score.append(pd.Series({ul:clf.score(X_t, y_t)}))
+        score_i = clf.score(X_t, y_t)
+        y_hat = clf.predict(X_t)
+        fm_i = precision_recall_fscore_support(y_t, y_hat, average='macro')
+        f1_i = precision_recall_fscore_support(y_t, y_hat, labels=[0, 1, 2, 3], average=None)
+
+        # Store in output dataframes
+        score = score.append(pd.Series({ul:score_i}))
+        fm = fm.append(pd.Series({ul:fm_i}))
+        f1 = f1.append(pd.DataFrame.from_dict({ul:f1_i}, orient='index'))
+
         # predict for the single unknown company!
-        pred = pred.append(pd.DataFrame.from_dict({ul:clf.predict(s).squeeze()}, orient='index'))
+        pred_i = clf.predict(s).squeeze() # just get single vector
+        pred = pred.append(pd.DataFrame.from_dict({ul:pred_i}, orient='index'))
 
         count += 1
         if count > MAX_COUNT:
             break
 
-    return pred, score
+    return pred, score, fm, f1
+
+def upsample_minority(X_in, y_in, yb, min_lab=3, n_classes=4):
+    """Create upsampled versions to balance classes."""
+    # Upsample minority classes
+    X_maj = X_in.loc[y_in.label == 3] # majority (y_in.label.value_counts())
+    y_maj = yb.loc[y_in.label == 3]
+    X_min_u = []
+    y_min_u = []
+    for i in range(n_classes-1):
+        # Upsample minority class
+        X_min_u.append(resample(X.loc[y_in.label == i], 
+                            replace=True, 
+                            n_samples=X_maj.shape[0],
+                            random_state=56))
+        y_min_u.append(resample(yb.loc[y_in.label == i], 
+                            replace=True, 
+                            n_samples=X_maj.shape[0],
+                            random_state=56))
+
+    # Combine majority class with upsampled minority class
+    X = pd.concat([X_maj] + X_min_u)
+    y = pd.concat([y_maj] + y_min_u)
+    return X, y
 
 #==============================================================================
 #==============================================================================

@@ -18,15 +18,9 @@ from sklearn.metrics import classification_report, roc_curve, auc
 from sklearn.neighbors import KNeighborsClassifier
 
 from timeline_features import feat_cols, classes
-from timeline_features import make_labels, make_features_dict
-from timeline_features import get_sorted_values, train_and_predict
+from timeline_features import make_labels, make_features_dict, train_and_predict
 
 np.set_printoptions(precision=4, suppress=True)
-plt.ion()
-
-save_flag = 0
-fig_dir = '../figures/'
-fig_ext = '.png'
 
 #------------------------------------------------------------------------------ 
 #        IMPORT THE DATA!!
@@ -72,47 +66,22 @@ y_test = make_labels(tf_test, df_test)
 # and the jth labeled company.
 
 print('Building feature matrices...')
-X_train, unlabeled_ids_train, ages = make_features_dict(tf_train, df_train, y_train)
-X_test, unlabeled_ids_test, ages = make_features_dict(tf_test, df_test, y_test)
+# X_train, unlabeled_ids_train, ages_train = make_features_dict(tf_train, df_train, y_train)
+X_test, unlabeled_ids_test, ages_test = make_features_dict(tf_test, df_test, y_test)
 
 n_neighbors = 5
 clf = KNeighborsClassifier(n_neighbors=n_neighbors)
 print('Training...')
-pred_train, score_train = train_and_predict(X_train, y_train, unlabeled_ids_train, clf)
-pred_test, score_test = train_and_predict(X_test, y_test, unlabeled_ids_test, clf)
-
-# TODO get these lines working
-# print(classification_report(y_train, pred_train))
-# print(classification_report(y_test, pred_test))
+# pred_train, score_train = train_and_predict(X_train, y_train, unlabeled_ids_train, clf)
+pred_test, score_test, fm_test, f1_test = train_and_predict(X_test, y_test, unlabeled_ids_test, clf)
 
 # Calculate score on CHANGED values between train and test set unknowns
 # unlab_train = y_train.loc[y_train.label == 4]
 # unlab_test = y_test.loc[y_test.id.isin(unlab.id)]
 # unlab_diff = (unlab_train.label - unlab_test.label) > 0
 
-#------------------------------------------------------------------------------ 
-#        Plot accuracy vs company age
-#------------------------------------------------------------------------------
-ages_tr_x, score_tr_y = get_sorted_values(ages, score_train)
-max_age = ages_tr_x.max() / 365
-
-# On originally labeled companies
-plt.figure(1)
-plt.clf()
-plt.plot([0, max_age], [0.25, 0.25], 'k--', label='Baseline')
-plt.plot(ages_tr_x / 365, score_tr_y, label='$k$-NN, $k$ = 5')
-
-plt.grid('on')
-plt.xlabel('Company Age [years]')
-plt.ylabel('Classifier Score')
-plt.ylim([0, 1])
-plt.legend()
-plt.tight_layout()
-
-if save_flag:
-    plt.savefig(fig_dir + 'accuracy_vs_age' + fig_ext)
-
-plt.show()
+# pickle.dump([pred_test, ages_test, score_test, f1_test, fm_test],
+#             open('../data/timeline_output_test.pkl', 'wb'))
 
 #------------------------------------------------------------------------------ 
 #        Key outputs

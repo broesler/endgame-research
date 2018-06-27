@@ -1,6 +1,6 @@
 #!/Users/bernardroesler/anaconda3/envs/insight/bin/python3
 #==============================================================================
-#     File: train_model.py
+#     File: test_model.py
 #  Created: 06/13/2018, 15:11
 #   Author: Bernie Roesler
 #
@@ -19,10 +19,10 @@ from sklearn.neighbors import KNeighborsClassifier
 
 from timeline_features import feat_cols, classes
 from timeline_features import make_labels, make_features_dict
-from timeline_features import get_sorted_values, train_model
+from timeline_features import get_sorted_values, train_and_predict
 
-# Equivalent to "shortg" Matlab format
 np.set_printoptions(precision=4, suppress=True)
+plt.ion()
 
 save_flag = 0
 fig_dir = '../figures/'
@@ -73,14 +73,15 @@ y_test = make_labels(tf_test, df_test)
 
 print('Building feature matrices...')
 X_train, unlabeled_ids_train, ages = make_features_dict(tf_train, df_train, y_train)
-# X_test, unlabeled_ids_test, ages = make_features_dict(tf_test, df_test, y_test)
+X_test, unlabeled_ids_test, ages = make_features_dict(tf_test, df_test, y_test)
 
 n_neighbors = 5
 clf = KNeighborsClassifier(n_neighbors=n_neighbors)
 print('Training...')
-pred_train, score_train = train_model(X_train, y_train, unlabeled_ids_train, clf)
-# pred_test, score_test = train_model(X_test, y_test, unlabeled_ids_test, clf)
+pred_train, score_train = train_and_predict(X_train, y_train, unlabeled_ids_train, clf)
+pred_test, score_test = train_and_predict(X_test, y_test, unlabeled_ids_test, clf)
 
+# TODO get these lines working
 # print(classification_report(y_train, pred_train))
 # print(classification_report(y_test, pred_test))
 
@@ -111,7 +112,7 @@ plt.tight_layout()
 if save_flag:
     plt.savefig(fig_dir + 'accuracy_vs_age' + fig_ext)
 
-# plt.show()
+plt.show()
 
 #------------------------------------------------------------------------------ 
 #        Key outputs

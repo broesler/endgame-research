@@ -152,7 +152,7 @@ def get_sorted_values(dx, dy):
     y = np.array([dy[k] for k in sort_keys])
     return x, y
 
-def train_model(X_in, y_in, unlabeled_ids, clf=None):
+def train_and_predict(X_in, y_in, unlabeled_ids, clf=None):
     """Train the model.
 
     Parameters
@@ -168,8 +168,8 @@ def train_model(X_in, y_in, unlabeled_ids, clf=None):
     """
     # Model the outcome
     # C = {}
-    pred = {}
-    score = {}
+    pred = pd.DataFrame()
+    score = pd.Series()
     count = 0
 
     if clf is None:
@@ -221,8 +221,9 @@ def train_model(X_in, y_in, unlabeled_ids, clf=None):
         clf.fit(X_tr, y_tr)
 
         # Mean accuracy over all classes
-        score[ul] = clf.score(X_t, y_t)
-        pred[ul] = clf.predict(s).squeeze() # predict for the single unknown company!
+        score = score.append(pd.Series({ul:clf.score(X_t, y_t)}))
+        # predict for the single unknown company!
+        pred = pred.append(pd.DataFrame.from_dict({ul:clf.predict(s).squeeze()}, orient='index'))
 
         count += 1
         if count > MAX_COUNT:

@@ -1,0 +1,47 @@
+#------------------------------------------------------------------------------ 
+#        SVM:
+#------------------------------------------------------------------------------
+RandomizedSearchCV took 200.87 seconds for 50 candidates parameter settings.
+Model with rank: 1
+Mean validation score: 0.622 (std: 0.044)
+Parameters: {'C': 69.728614871314662, 'gamma': 0.38946100384952903}
+
+Model with rank: 2
+Mean validation score: 0.621 (std: 0.046)
+Parameters: {'C': 107.62836323006695, 'gamma': 0.33288927550773384}
+
+Model with rank: 3
+Mean validation score: 0.612 (std: 0.045)
+Parameters: {'C': 205.43083001188461, 'gamma': 0.22998271125798034}
+
+#------------------------------------------------------------------------------ 
+#        KNeighborsClassifier:
+#------------------------------------------------------------------------------
+RandomizedSearchCV took 55.02 seconds for 50 candidates parameter settings.
+Model with rank: 1
+Mean validation score: 0.769 (std: 0.064)
+Parameters: {'weights': 'distance', 'n_neighbors': 1}
+
+Model with rank: 1
+Mean validation score: 0.769 (std: 0.064)
+Parameters: {'weights': 'uniform', 'n_neighbors': 1}
+
+Model with rank: 3
+Mean validation score: 0.746 (std: 0.077)
+Parameters: {'weights': 'distance', 'n_neighbors': 3}
+
+#------------------------------------------------------------------------------ 
+#        RandomForestClassifier:
+#------------------------------------------------------------------------------
+RandomizedSearchCV took 13.53 seconds for 100 candidates parameter settings.
+Model with rank: 1
+Mean validation score: 0.719 (std: 0.062)
+Parameters: {'criterion': 'entropy', 'max_depth': None, 'max_features': 6, 'min_samples_split': 4}
+
+Model with rank: 2
+Mean validation score: 0.718 (std: 0.061)
+Parameters: {'criterion': 'entropy', 'max_depth': None, 'max_features': 4, 'min_samples_split': 2}
+
+Model with rank: 3
+Mean validation score: 0.716 (std: 0.062)
+Parameters: {'criterion': 'gini', 'max_depth': None, 'max_features': 3, 'min_samples_split': 2}

@@ -38,46 +38,42 @@
 
   <body>
 
-    <!-- <nav class="navbar navbar&#45;inverse navbar&#45;fixed&#45;top"> -->
-    <!--   <div class="container"> -->
-    <!--     <div class="navbar&#45;header"> -->
-    <!--       <button type="button" class="navbar&#45;toggle collapsed" data&#45;toggle="collapse" data&#45;target="#navbar" aria&#45;expanded="false" aria&#45;controls="navbar"> -->
-    <!--         <span class="sr&#45;only">Toggle navigation</span> -->
-    <!--         <span class="icon&#45;bar"></span> -->
-    <!--         <span class="icon&#45;bar"></span> -->
-    <!--         <span class="icon&#45;bar"></span> -->
-    <!--       </button> -->
-    <!--       <a class="navbar&#45;brand" href="#">Project name</a> -->
-    <!--     </div> -->
-    <!--     <div id="navbar" class="collapse navbar&#45;collapse"> -->
-    <!--       <ul class="nav navbar&#45;nav"> -->
-    <!--         <li class="active"><a href="#">Home</a></li> -->
-    <!--         <li><a href="#about">About</a></li> -->
-    <!--         <li><a href="#contact">Contact</a></li> -->
-    <!--       </ul> -->
-    <!--     </div><!&#45;&#45;/.nav&#45;collapse &#45;&#45;> -->
-    <!--   </div> -->
-    <!-- </nav> -->
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+      <a class="navbar-brand" href="/">EndGame</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse"
+        data-target="#navbarsExampleDefault"
+        aria-controls="navbarsExampleDefault" aria-expanded="false"
+        aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarsExampleDefault">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item active">
+            <a class="nav-link" href="/">Home <span class="sr-only">(current)</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/about">About</a>
+          </li>
+        </ul>
+      </div>
+    </nav>
 
   <br></br>
 
   <div class="container">
     <div class="starter-template">
       <h2>EndGame Results</h2>
-      <p>Enter a Company Name</p>
     </div>
 
     <div class = "container">
-
       <div class = "container">
         <!--Make sure the form has the autocomplete function switched off:-->
         <!-- <form action="/output" method="GET" autocomplete="off"> -->
         <form action="/output" method="GET">
           <div class="form-group">
               <label for="company_name">Company Name:</label>
-              <input type="text" id="company_name" name='company_name' placeholder="e.g. Twitter">
+              <input type="text" id="company_name" name='company_name' placeholder="e.g. Square">
           </div>
-
           <div>
             <button type="submit" class="btn btn-default btn-lg">Go!</button>
           </div>
@@ -88,25 +84,23 @@
       <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
     </div> <!-- /.container-->
 
-  <br></br>
+    <br></br>
 
-  <div class="container">
-    <div class="starter-template">
-      <h3>Results:</h3>
-      <p class="lead">{{ company_name }} will {{ status }}
-      with {{ probs_str }}% probability!</p>
-      <p>The 5 most important features in the analysis were:</p>
-      <table class="table table-hover">
-        <tr> <th>Feature</th> <th>Importance</th> </tr>
-        {% for feat in fp[:5] %}
-        <tr><td>{{ feat[0].replace('_', ' ') }}</td>
-          <td>{{ "{:0.2f}%".format(100*feat[1]) }}</td>
-        </tr>
-        {% endfor %}
-      </table>
-    </div>
-
-  </div><!-- /.container -->
+    <div class="container">
+      <div class="starter-template">
+        <h3>Results:</h3>
+        <p class="lead">{{ company_name }} will {{ status }}!</p>
+        <p>The 5 most important features in the analysis were:</p>
+        <table class="table table-hover">
+          <tr> <th>Feature</th> <th>Importance</th> </tr>
+          {% for feat in fp[:5] %}
+          <tr><td>{{ feat[0].replace('_', ' ') }}</td>
+            <td>{{ "{:0.2f}%".format(100*feat[1]) }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div><!-- /.container -->
 
     <div class="container">
       <div class="starter-template">
@@ -131,9 +125,9 @@
 
       <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
       <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
-     </div><!-- /.container -->
+    </div><!-- /.container -->
 
-     <br></br>
+    <br></br>
 
      <!-- Make the plot!! -->
      <div class="container">

@@ -20,19 +20,24 @@ import seaborn as sns
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.utils import resample
 
+save_flag = 0
+fig_dir = '../figures/'
+fig_ext = '.png'
+
 plt.ion()
 plt.close('all')
 
 #------------------------------------------------------------------------------ 
 #        IMPORT THE DATA!!
 #------------------------------------------------------------------------------
-filename = '../data/cb_input_datasets.pkl'
+filename = '../data/cb_input_datasets_full.pkl'
 tf, df = pickle.load(open(filename, 'rb'))
 
 # Plot events per month
 # tf.groupby([tf.dates.dt.year, tf.dates.dt.month]).count().plot(kind='bar')
 fig, ax = plt.subplots(figsize=(11,9))
-tf.dates.groupby(tf.dates.dt.year).count().plot(ax=ax, kind='bar', color='C0')
+tf.dates.groupby(tf[tf.event_id == 'founded'].dates.dt.year).count()\
+        .plot(ax=ax, kind='bar', color='C0')
 
 # ax.xaxis.set_major_locator(mdates.YearLocator())
 # ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
@@ -40,7 +45,10 @@ tf.dates.groupby(tf.dates.dt.year).count().plot(ax=ax, kind='bar', color='C0')
 
 plt.grid('off')
 plt.tight_layout()
-plt.show()
+if save_flag:
+    plt.savefig(fig_dir + 'funding_events_per_month' + fig_ext)
 
+
+plt.show()
 #==============================================================================
 #==============================================================================

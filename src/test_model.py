@@ -17,7 +17,6 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, roc_curve, auc
 from sklearn.neighbors import KNeighborsClassifier
 
-from timeline_features import feat_cols, classes
 from timeline_features import make_labels, make_features_dict, train_and_predict
 
 np.set_printoptions(precision=4, suppress=True)
@@ -59,6 +58,14 @@ y_train = make_labels(tf_train, df_train)
 y_test = make_labels(tf_test, df_test)
 pickle.dump(y_test, open('../data/y_labels_median_0std.pkl', 'wb'))
 
+# TODO Calculate score on CHANGED values between train and test set unknowns
+# TODO ONLY have to run predictions on CHANGED unknowns!!
+# Instead of returning unlabeled ids, we can just provide a list over which to
+# loop (should be ~5,000)
+unlab_train = y_train.loc[y_train.label == 4]
+unlab_test = y_test.loc[y_test.id.isin(unlab_train.id)]
+unlab_diff = sum((unlab_train.label - unlab_test.label) > 0)
+
 # Based on labels, need to build features comparing EVERY un-labeled company
 # with every labeled company (i.e. cosine similarity), BUT, we need to cut off
 # the `time_to_event` threshold for each comparison. We are building a matrix:
@@ -75,15 +82,6 @@ clf = KNeighborsClassifier(n_neighbors=n_neighbors)
 print('Training...')
 # pred_train, score_train = train_and_predict(X_train, y_train, unlabeled_ids_train, clf)
 pred_test, score_test, fm_test, f1_test = train_and_predict(X_test, y_test, unlabeled_ids_test, clf)
-
-# TODO Calculate score on CHANGED values between train and test set unknowns
-# TODO ONLY have to run predictions on CHANGED unknowns!!
-# Instead of returning unlabeled ids, we can just provide a list over which to
-# loop (should be ~5,000)
-
-unlab_train = y_train.loc[y_train.label == 4]
-unlab_test = y_test.loc[y_test.id.isin(unlab_train.id)]
-unlab_diff = sum((unlab_train.label - unlab_test.label) > 0)
 
 pickle.dump([pred_test, ages_test, score_test, f1_test, fm_test],
             open('../data/timeline_output_test_full.pkl', 'wb'))

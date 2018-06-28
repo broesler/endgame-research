@@ -96,48 +96,6 @@ if save_flag:
 # if save_flag:
 #     plt.savefig(fig_dir + 'age_at_exit_failure' + fig_ext)
 
-# plt.figure(5, figsize=(11, 9))
-# plt.clf()
-# g = sns.boxplot(y='category_code', 
-#                 x='age_at_exit_years', 
-#                 data=df[y == 0])
-# plt.title('Age at Close')
-# g.set_xlabel('Age (years)')
-# g.set_ylabel('Category')
-# g.set_xlim([0, 50])
-# plt.xticks(rotation=70)
-# plt.tight_layout()
-# if save_flag:
-#     plt.savefig(fig_dir + 'age_at_exit_failure' + fig_ext)
-
-# plt.figure(3, figsize=(11, 9))
-# plt.clf()
-# g = sns.boxplot(y='category_code', 
-#                 x='age_at_exit_years', 
-#                 data=df[y == 2])
-# plt.title('Age of Dinosaurs')
-# g.set_xlabel('Age (years)')
-# g.set_ylabel('Category')
-# g.set_xlim([0, 50])
-# plt.xticks(rotation=70)
-# plt.tight_layout()
-# if save_flag:
-#     plt.savefig(fig_dir + 'age_at_exit_lateexit' + fig_ext)
-#
-# plt.figure(4, figsize=(11, 9))
-# plt.clf()
-# g = sns.boxplot(y='category_code', 
-#                 x='age_at_exit_years', 
-#                 data=df[y == 3])
-# plt.title('Age of Operating Companies')
-# g.set_xlabel('Age (years)')
-# g.set_ylabel('Category')
-# g.set_xlim([0, 50])
-# plt.xticks(rotation=70)
-# plt.tight_layout()
-# if save_flag:
-#     plt.savefig(fig_dir + 'age_at_exit_operating' + fig_ext)
-
 # #------------------------------------------------------------------------------ 
 # #        Plot location
 # #------------------------------------------------------------------------------
@@ -178,6 +136,7 @@ if save_flag:
 #------------------------------------------------------------------------------ 
 #        Pair plot of features
 #------------------------------------------------------------------------------
+# TODO pick a point in time and show an interesting one in backup slides
 # Impute NaN values to mean of column
 # dff = df.fillna(df.median())
 

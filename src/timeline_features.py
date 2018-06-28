@@ -32,10 +32,6 @@ def make_labels(tf, df):
     y = df[['id']].copy()
     y['label'] = np.nan
 
-    # Failures
-    closures = tf.loc[tf.event_id == 'closed']
-    y.loc[y.id.isin(closures.id), 'label'] = 0
-
     # What is a successful exit? 
     # "Exit" == acquisition or IPO before median age of
     # acquisition for a given industry
@@ -46,18 +42,24 @@ def make_labels(tf, df):
     g = exits.groupby('category_code')
     threshold = g.median().time_to_event #+ g.std().time_to_event # for ALL acquisitions
 
-    # Slow growth companies
-    others = tf.loc[~(tf.id.isin(exits.id) | tf.id.isin(closures.id))]\
+    # Companies that have not exited
+    others = tf.loc[~tf.id.isin(exits.id)]\
                .groupby('id', as_index=False).time_to_event.max()\
                .merge(df, on='id', how='inner')
 
     # Set age threshold for each label
     exits['threshold'] = np.nan
+    others['threshold'] = np.nan
     for label in threshold.index:
         exits.loc[exits.category_code == label, 'threshold'] = threshold[label]
         others.loc[others.category_code == label, 'threshold'] = threshold[label]
 
-    # Companies that have exited in a timely manner
+    # Failures -- close before threshold
+    closures = others.loc[(others.event_id == 'closed') 
+                          & (others.time_to_event < others.threshold)]
+    y.loc[y.id.isin(closures.id), 'label'] = 0
+
+    # Companies that have exited before threshold
     timely_exits = exits.loc[exits.time_to_event < exits.threshold]
     y.loc[y.id.isin(timely_exits.id), 'label'] = 1
 
@@ -65,7 +67,9 @@ def make_labels(tf, df):
     late_exits = exits.loc[exits.time_to_event >= exits.threshold]
     y.loc[y.id.isin(late_exits.id), 'label'] = 2
 
-    # Companies who are beyond threshold, but haven't exited or closed
+    # Companies who are beyond threshold, but haven't exited
+    # dinosaurs = others.loc[(others.event_id != 'closed') 
+    #                       & (others.time_to_event >= others.threshold)]
     dinosaurs = others.loc[others.time_to_event >= others.threshold]
     y.loc[y.id.isin(dinosaurs.id), 'label'] = 3
 

@@ -121,7 +121,7 @@ def endgame_output():
     script, div = components(plot)
 
     # TODO fp needs better names, descriptions (footnotes?)
-    return render_template('output.html', company_name=company_name, fp=fp,
+    return render_template('output.html', company_name=company_name, 
                            company_names=company_names,
                            status=status, comps=comps, plot_script=script,
                            plot_div=div, js_resources=js_resources,

@@ -1,6 +1,7 @@
-#------------------------------------------------------------------------------ 
-#        SVM:
-#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------- 
+#        With non-binary labels:
+#-------------------------------------------------------------------------------
+# SVM:
 RandomizedSearchCV took 200.87 seconds for 50 candidates parameter settings.
 Model with rank: 1
 Mean validation score: 0.622 (std: 0.044)
@@ -14,9 +15,7 @@ Model with rank: 3
 Mean validation score: 0.612 (std: 0.045)
 Parameters: {'C': 205.43083001188461, 'gamma': 0.22998271125798034}
 
-#------------------------------------------------------------------------------ 
-#        KNeighborsClassifier:
-#------------------------------------------------------------------------------
+# KNeighborsClassifier:
 RandomizedSearchCV took 55.02 seconds for 50 candidates parameter settings.
 Model with rank: 1
 Mean validation score: 0.769 (std: 0.064)
@@ -30,9 +29,7 @@ Model with rank: 3
 Mean validation score: 0.746 (std: 0.077)
 Parameters: {'weights': 'distance', 'n_neighbors': 3}
 
-#------------------------------------------------------------------------------ 
-#        RandomForestClassifier:
-#------------------------------------------------------------------------------
+# RandomForestClassifier:
 RandomizedSearchCV took 13.53 seconds for 100 candidates parameter settings.
 Model with rank: 1
 Mean validation score: 0.719 (std: 0.062)
@@ -45,3 +42,49 @@ Parameters: {'criterion': 'entropy', 'max_depth': None, 'max_features': 4, 'min_
 Model with rank: 3
 Mean validation score: 0.716 (std: 0.062)
 Parameters: {'criterion': 'gini', 'max_depth': None, 'max_features': 3, 'min_samples_split': 2}
+
+#------------------------------------------------------------------------------- 
+#        With binary labels
+#-------------------------------------------------------------------------------
+# RF:
+RandomizedSearchCV took 11.95 seconds for 100 candidates parameter settings.
+Model with rank: 1
+Mean validation score: 0.772 (std: 0.007)
+Parameters: {'criterion': 'entropy', 'max_depth': None, 'max_features': 4, 'min_samples_split': 3}
+
+Model with rank: 2
+Mean validation score: 0.771 (std: 0.003)
+Parameters: {'criterion': 'entropy', 'max_depth': None, 'max_features': 1, 'min_samples_split': 3}
+
+Model with rank: 3
+Mean validation score: 0.767 (std: 0.009)
+Parameters: {'criterion': 'gini', 'max_depth': None, 'max_features': 5, 'min_samples_split': 4}
+
+# SVM:
+RandomizedSearchCV took 309.36 seconds for 100 candidates parameter settings.
+Model with rank: 1
+Mean validation score: 0.686 (std: 0.007)
+Parameters: {'C': 69.819976631697372, 'gamma': 0.5618553849000274}
+
+Model with rank: 2
+Mean validation score: 0.681 (std: 0.007)
+Parameters: {'C': 166.18243118650162, 'gamma': 0.38578247035764424}
+
+Model with rank: 3
+Mean validation score: 0.668 (std: 0.007)
+Parameters: {'C': 38.480713085826665, 'gamma': 0.41219490952943821}
+
+# kNN:
+RandomizedSearchCV took 58.24 seconds for 50 candidates parameter settings.
+Model with rank: 1
+Mean validation score: 0.730 (std: 0.005)
+Parameters: {'weights': 'distance', 'n_neighbors': 2}
+
+Model with rank: 2
+Mean validation score: 0.729 (std: 0.019)
+Parameters: {'weights': 'distance', 'n_neighbors': 12}
+
+Model with rank: 3
+Mean validation score: 0.728 (std: 0.021)
+Parameters: {'weights': 'distance', 'n_neighbors': 11}
+

@@ -35,10 +35,6 @@ feat_cols = ['age_at_exit', 'milestones', 'latitude', 'longitude', 'offices',
              'invested_companies', 'acq_before_exit', 'investors',
              'investors_per_round', 'funding_per_round', 'avg_time_to_funding',
              'experience']
-# funding_rounds = ['a', 'angel', 'b', 'c', 'convertible', 'crowd',
-#              'crowd_equity', 'd', 'debt_round', 'e', 'f', 'g', 'grant',
-#              'partial', 'post_ipo_debt', 'post_ipo_equity', 'private_equity',
-#              'secondary_market', 'seed', 'unattributed']
 
 classes = ['Timely Exit', 'Late Exit', 'Slow Growth']
 

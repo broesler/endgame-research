@@ -91,22 +91,20 @@ def endgame_input():
 # The good stuff
 @app.route('/output')
 def endgame_output():
-
+    """Make the output."""
     company_name = request.args.get('company_name')
     cid = get_company_id(company_name)
 
     # Get prediction class and probability
     pred_class = pred.loc[cid].idxmax() # [0, 1, 2, 3]
-    probs = pred_probas[pred_class].loc[cid][1]
-    probs_str = "{:.2f}".format(100*probs)
     if pred_class == 0:
-        status = 'fail '
+        status = 'fail'
     elif pred_class == 1:
-        status = 'exit in a timely fashion '
+        status = 'exit in a timely fashion'
     elif pred_class == 2:
-        status = 'exit, but in a long time, '
+        status = 'exit, but in a long time'
     elif pred_class == 3:
-        status = 'continue operating without exit '
+        status = 'continue operating without exit'
     else:
         status = 'Error.'
 
@@ -124,10 +122,15 @@ def endgame_output():
 
     # TODO fp needs better names, descriptions (footnotes?)
     return render_template('output.html', company_name=company_name, fp=fp,
-                           company_names=company_names, probs_str=probs_str,
+                           company_names=company_names,
                            status=status, comps=comps, plot_script=script,
                            plot_div=div, js_resources=js_resources,
                            css_resources=css_resources)
+
+# Embed slides in app
+@app.route('/about')
+def endgame_about():
+    return render_template('about.html')
 
 #==============================================================================
 #==============================================================================

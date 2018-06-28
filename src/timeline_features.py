@@ -44,7 +44,7 @@ def make_labels(tf, df):
 
     # Companies that have not exited
     others = tf.loc[~tf.id.isin(exits.id)]\
-               .groupby('id', as_index=False).time_to_event.max()\
+               .groupby('id', as_index=False)[['event_id', 'time_to_event']].max()\
                .merge(df, on='id', how='inner')
 
     # Set age threshold for each label
@@ -89,7 +89,7 @@ def make_features_dict(tf, df, y):
     count = 0
     MAX_COUNT = 100
     for _, ul in unlabeled_ids.iteritems():
-        print('Building features for {}'.format(ul))
+        print('{:3d} Building features for {}'.format(count, ul))
         # Augment dataframes to include one unlabeled company
         tf_aug = tf_lab.append(tf[tf.id == ul])
         df_aug = df_lab.append(df[df.id == ul])
@@ -151,7 +151,8 @@ def make_feature_mat(tf, df):
     X = X.join(tt, on='id')
 
     # TODO add category as feature columns
-    # TODO include # co-investors per round (subtract one before cumsum()
+    import ipdb; ipdb.set_trace()
+    dvs = pd.get_dummies(df.category_code.unique())
 
     Xn = normalize(X[feat_cols])
     # Include non-normalized data again
@@ -282,6 +283,15 @@ def upsample_minority(X_in, y_in, yb, min_lab=3, n_classes=4):
     X = pd.concat([X_maj] + X_min_u)
     y = pd.concat([y_maj] + y_min_u)
     return X, y
+
+def inverse_binarize(yb):
+    """Inverse binarize."""
+    y = yb[[0]].copy()
+    y.loc[yb[0] == 1] = 0
+    y.loc[yb[1] == 1] = 1
+    y.loc[yb[2] == 1] = 2
+    y.loc[yb[3] == 1] = 3
+    return y
 
 #==============================================================================
 #==============================================================================

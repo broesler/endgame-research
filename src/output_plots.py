@@ -20,11 +20,12 @@ save_flag = 0
 fig_dir = '../figures/'
 fig_ext = '.png'
 
-pred_test, ages_test, score_test, f1_test, fm_test = \
-    pickle.load(open('../data/timeline_output_test_full.pkl', 'rb'))
-    # pickle.load(open('../data/timeline_output_test.pkl', 'rb'))
+plt.ion()
 
 n_neighbors = 5
+# filename = '../data/timeline_output_test.pkl'
+filename = '../data/timeline_output_test_full_knn{}.pkl'.format(n_neighbors)
+pred_test, ages_test, score_test, f1_test, fm_test = pickle.load(open(filename, 'rb'))
 
 #------------------------------------------------------------------------------ 
 #        Plot accuracy vs company age

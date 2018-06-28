@@ -14,8 +14,9 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sklearn.metrics import classification_report, roc_curve, auc
+from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
 
 from timeline_features import make_labels, make_features_dict, train_and_predict
 
@@ -77,14 +78,26 @@ print('Building feature matrices...')
 # X_train, unlabeled_ids_train, ages_train = make_features_dict(tf_train, df_train, y_train)
 X_test, unlabeled_ids_test, ages_test = make_features_dict(tf_test, df_test, y_test)
 
-n_neighbors = 5
-clf = KNeighborsClassifier(n_neighbors=n_neighbors)
+# n_neighbors = 5
+# clf = KNeighborsClassifier(n_neighbors=n_neighbors)
+clf = SVC(kernel='rbf', C=1) # gamma='auto' --> 1/n_features
 print('Training...')
 # pred_train, score_train = train_and_predict(X_train, y_train, unlabeled_ids_train, clf)
 pred_test, score_test, fm_test, f1_test = train_and_predict(X_test, y_test, unlabeled_ids_test, clf)
 
-pickle.dump([pred_test, ages_test, score_test, f1_test, fm_test],
-            open('../data/timeline_output_test_full.pkl', 'wb'))
+# filename = '../data/timeline_output_test_full_knn{}.pkl'.format(n_neighbors)
+# pickle.dump([pred_test, ages_test, score_test, f1_test, fm_test], open(filename, 'wb'))
+
+# Get feature matrix for max
+# key_age_max = max(ages_test, key=(lambda key: ages_test[key]))
+# X_max = X_test[key_age_max]
+
+# Confusion matrix
+# p_test = pred_test.copy()
+# p_test['id'] = p_test.index
+# p_test.reset_index(drop=True, inplace=True)
+#
+# confusion_matrix(y_test.loc[y_test.id.isin(pred_test.index), 'label'], inverse_binarize(pred_test))
 
 #------------------------------------------------------------------------------ 
 #        Key outputs

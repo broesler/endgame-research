@@ -30,7 +30,7 @@ plt.close('all')
 #------------------------------------------------------------------------------ 
 #        IMPORT THE DATA!!
 #------------------------------------------------------------------------------
-filename = '../data/cb_input_datasets.pkl'
+filename = '../data/cb_input_datasets_full.pkl'
 tf, df = pickle.load(open(filename, 'rb'))
 
 # Plot events per month

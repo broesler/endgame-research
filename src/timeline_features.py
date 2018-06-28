@@ -85,6 +85,7 @@ def make_features_dict(tf, df, y):
     count = 0
     MAX_COUNT = 100
     for _, ul in unlabeled_ids.iteritems():
+        print('Building features for {}'.format(ul))
         # Augment dataframes to include one unlabeled company
         tf_aug = tf_lab.append(tf[tf.id == ul])
         df_aug = df_lab.append(df[df.id == ul])
@@ -104,9 +105,9 @@ def make_feature_mat(tf, df):
     # n = df.id.unique().shape[0]
     # X = pd.DataFrame(data=np.random.randn(n, 10))
     # X['id'] = df.id.unique()
-
     X = df.copy()
 
+    # Funding Rounds
     tt = tf.loc[tf.event_id == 'funded'].groupby('id').mean().time_diff
     tt.name = 'mean_fund_time'
     X = X.join(tt, on='id')
@@ -118,7 +119,35 @@ def make_feature_mat(tf, df):
     # Fill NaN values with 0s (funding event does not exist)
     X.fillna(value=0, inplace=True)
 
+    # Milestones
+    tt = tf.loc[tf.event_id == 'milestone'].groupby('id').mean().time_diff
+    tt.name = 'mean_milestone_time'
+    X = X.join(tt, on='id')
+
+    tt = tf.loc[tf.event_id == 'milestone'].groupby('id').max().event_count
+    tt.name = 'milestones'
+    X = X.join(tt, on='id')
+
+    # Investments
+    tt = tf.loc[tf.event_id == 'investment'].groupby('id').mean().time_diff
+    tt.name = 'mean_investment_time'
+    X = X.join(tt, on='id')
+
+    tt = tf.loc[tf.event_id == 'investment'].groupby('id').max().event_count
+    tt.name = 'investments'
+    X = X.join(tt, on='id')
+
+    # Acquisitions
+    tt = tf.loc[tf.event_id == 'acquisition'].groupby('id').mean().time_diff
+    tt.name = 'mean_acquisition_time'
+    X = X.join(tt, on='id')
+
+    tt = tf.loc[tf.event_id == 'acquisition'].groupby('id').max().event_count
+    tt.name = 'acquisitions'
+    X = X.join(tt, on='id')
+
     # TODO add category as feature columns
+    # TODO include # co-investors per round (subtract one before cumsum()
 
     Xn = normalize(X[feat_cols])
     # Include non-normalized data again
@@ -236,7 +265,7 @@ def upsample_minority(X_in, y_in, yb, min_lab=3, n_classes=4):
     y_min_u = []
     for i in range(n_classes-1):
         # Upsample minority class
-        X_min_u.append(resample(X.loc[y_in.label == i], 
+        X_min_u.append(resample(X_in.loc[y_in.label == i], 
                             replace=True, 
                             n_samples=X_maj.shape[0],
                             random_state=56))

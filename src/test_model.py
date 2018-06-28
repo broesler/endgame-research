@@ -25,7 +25,8 @@ np.set_printoptions(precision=4, suppress=True)
 #------------------------------------------------------------------------------ 
 #        IMPORT THE DATA!!
 #------------------------------------------------------------------------------
-filename = '../data/cb_input_datasets.pkl'
+# filename = '../data/cb_input_datasets.pkl' # just funding rounds
+filename = '../data/cb_input_datasets_full.pkl'
 tf, df = pickle.load(open(filename, 'rb'))
 
 #------------------------------------------------------------------------------ 
@@ -56,7 +57,7 @@ df_test = df[df.id.isin(tf_test.id)]
 # Label data
 y_train = make_labels(tf_train, df_train)
 y_test = make_labels(tf_test, df_test)
-# pickle.dump(y_test, open('../data/y_labels_median_0std.pkl', 'wb'))
+pickle.dump(y_test, open('../data/y_labels_median_0std.pkl', 'wb'))
 
 # Based on labels, need to build features comparing EVERY un-labeled company
 # with every labeled company (i.e. cosine similarity), BUT, we need to cut off
@@ -75,13 +76,17 @@ print('Training...')
 # pred_train, score_train = train_and_predict(X_train, y_train, unlabeled_ids_train, clf)
 pred_test, score_test, fm_test, f1_test = train_and_predict(X_test, y_test, unlabeled_ids_test, clf)
 
-# Calculate score on CHANGED values between train and test set unknowns
-# unlab_train = y_train.loc[y_train.label == 4]
-# unlab_test = y_test.loc[y_test.id.isin(unlab.id)]
-# unlab_diff = (unlab_train.label - unlab_test.label) > 0
+# TODO Calculate score on CHANGED values between train and test set unknowns
+# TODO ONLY have to run predictions on CHANGED unknowns!!
+# Instead of returning unlabeled ids, we can just provide a list over which to
+# loop (should be ~5,000)
 
-# pickle.dump([pred_test, ages_test, score_test, f1_test, fm_test],
-#             open('../data/timeline_output_test.pkl', 'wb'))
+unlab_train = y_train.loc[y_train.label == 4]
+unlab_test = y_test.loc[y_test.id.isin(unlab_train.id)]
+unlab_diff = sum((unlab_train.label - unlab_test.label) > 0)
+
+pickle.dump([pred_test, ages_test, score_test, f1_test, fm_test],
+            open('../data/timeline_output_test_full.pkl', 'wb'))
 
 #------------------------------------------------------------------------------ 
 #        Key outputs

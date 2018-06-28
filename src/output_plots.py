@@ -21,7 +21,8 @@ fig_dir = '../figures/'
 fig_ext = '.png'
 
 pred_test, ages_test, score_test, f1_test, fm_test = \
-    pickle.load(open('../data/timeline_output_test.pkl', 'rb'))
+    pickle.load(open('../data/timeline_output_test_full.pkl', 'rb'))
+    # pickle.load(open('../data/timeline_output_test.pkl', 'rb'))
 
 n_neighbors = 5
 

@@ -21,11 +21,16 @@ from sklearn.metrics import classification_report
 from sklearn.utils import resample
 
 feat_cols = ['latitude', 'longitude', 'offices', 'products',
-             'mean_fund_time', 'funding_rounds']
+             'mean_fund_time', 'funding_rounds', 'mean_funding_amt',
+             'cumulative_famt',
+             'mean_milestone_time', 'milestones',
+             'mean_investment_time', 'investments',
+             'mean_acquisition_time', 'acquisitions']
 
-classes = ['Failed', 'Timely Exit', 'Late Exit', 'Slow Growth']
+classes = ['Timely Exit', 'Late Exit', 'Slow Growth']
+class_labels = [0, 1, 2]
 
-MAX_COUNT = 100
+MAX_COUNT = 5
 
 def make_labels(tf, df):
     """Label company outcomes given timeline and static dataframe."""
@@ -54,40 +59,32 @@ def make_labels(tf, df):
         exits.loc[exits.category_code == label, 'threshold'] = threshold[label]
         others.loc[others.category_code == label, 'threshold'] = threshold[label]
 
-    # Failures -- close before threshold
-    closures = others.loc[(others.event_id == 'closed') 
-                          & (others.time_to_event < others.threshold)]
-    y.loc[y.id.isin(closures.id), 'label'] = 0
-
     # Companies that have exited before threshold
     timely_exits = exits.loc[exits.time_to_event < exits.threshold]
-    y.loc[y.id.isin(timely_exits.id), 'label'] = 1
+    y.loc[y.id.isin(timely_exits.id), 'label'] = 0
 
     # Companies that have exited, but beyond the threshold
     late_exits = exits.loc[exits.time_to_event >= exits.threshold]
-    y.loc[y.id.isin(late_exits.id), 'label'] = 2
+    y.loc[y.id.isin(late_exits.id), 'label'] = 1
 
     # Companies who are beyond threshold, but haven't exited
-    # dinosaurs = others.loc[(others.event_id != 'closed') 
-    #                       & (others.time_to_event >= others.threshold)]
     dinosaurs = others.loc[others.time_to_event >= others.threshold]
-    y.loc[y.id.isin(dinosaurs.id), 'label'] = 3
+    y.loc[y.id.isin(dinosaurs.id), 'label'] = 2
 
     # Everything else is a "young company"
-    y.fillna(value=4, inplace=True)
+    y.fillna(value=3, inplace=True)
 
     return y
 
 def make_features_dict(tf, df, y):
     """Build dictionary of feature matrices. One per unlabeled company."""
-    labeled_ids = y.loc[y.label != 4].id
+    labeled_ids = y.loc[y.label != 3].id
     tf_lab = tf.loc[tf.id.isin(labeled_ids)]
     df_lab = df.loc[df.id.isin(labeled_ids)]
-    unlabeled_ids = y.loc[y.label == 4].id
+    unlabeled_ids = y.loc[y.label == 3].id
     X = {}
     age = {}
     count = 0
-    MAX_COUNT = 100
     for _, ul in unlabeled_ids.iteritems():
         print('{:3d} Building features for {}'.format(count, ul))
         # Augment dataframes to include one unlabeled company
@@ -118,6 +115,14 @@ def make_feature_mat(tf, df):
 
     tt = tf.loc[tf.event_id == 'funded'].groupby('id').max().event_count
     tt.name = 'funding_rounds'
+    X = X.join(tt, on='id')
+
+    tt = tf.loc[tf.event_id == 'funded'].groupby('id').mean().famt
+    tt.name = 'mean_funding_amt'
+    X = X.join(tt, on='id')
+
+    tt = tf.loc[tf.event_id == 'funded'].groupby('id').cumsum().famt
+    tt.name = 'cumulative_famt'
     X = X.join(tt, on='id')
 
     # Fill NaN values with 0s (funding event does not exist)
@@ -151,8 +156,10 @@ def make_feature_mat(tf, df):
     X = X.join(tt, on='id')
 
     # TODO add category as feature columns
-    import ipdb; ipdb.set_trace()
-    dvs = pd.get_dummies(df.category_code.unique())
+    # import ipdb; ipdb.set_trace()
+    # dvs = pd.get_dummies(df.category_code)
+    # dvs['id'] = df['id']
+    # X = X.merge(dvs, on='id', how='inner')
 
     Xn = normalize(X[feat_cols])
     # Include non-normalized data again
@@ -161,6 +168,7 @@ def make_feature_mat(tf, df):
 
 def normalize(X):
     X = X.fillna(X.median())
+    X = X.fillna(0)
     Xn = StandardScaler().fit_transform(X)
     Xn = pd.DataFrame(data=Xn, columns=X.columns, index=X.index)
     return Xn
@@ -176,8 +184,8 @@ def similarity(x, F):
 
 def known_one_hot(y):
     """Convert vector of known labels to one hot."""
-    y_lab = y[y.label != 4]
-    yb = label_binarize(y_lab.label, classes=[0, 1, 2, 3])
+    y_lab = y[y.label != 3]
+    yb = label_binarize(y_lab.label, classes=class_labels)
     y = pd.DataFrame(data=yb, index=y_lab.index)
     return y
 
@@ -217,6 +225,7 @@ def train_and_predict(X_in, y_in, unlabeled_ids, clf=None):
     yb = known_one_hot(y_in)
 
     for _, ul in unlabeled_ids.iteritems():
+        print('{:3d} Training model for {}'.format(count, ul))
         # Split out unknown and get similarity of single vector
         X_aug = X_in[ul]
         s = X_aug.loc[X_aug.id == ul, feat_cols].copy() # (m, 1) features of unknown company
@@ -229,7 +238,7 @@ def train_and_predict(X_in, y_in, unlabeled_ids, clf=None):
         # sim_idx = C[ul].iloc[idx[0:6]].index
         # pred[ul] = y_in.loc[sim_idx[0]]
 
-        X, y = upsample_minority(X, y_in, yb, min_lab=3)
+        X, y = upsample_minority(X, y_in, yb, maj_lab=2)
 
         # Don't use "train", "test" here to avoid over-writing previous time break
         X_tr, X_t, y_tr, y_t = train_test_split(X, y, train_size=0.6, 
@@ -244,7 +253,7 @@ def train_and_predict(X_in, y_in, unlabeled_ids, clf=None):
         score_i = clf.score(X_t, y_t)
         y_hat = clf.predict(X_t)
         fm_i = precision_recall_fscore_support(y_t, y_hat, average='macro')
-        f1_i = precision_recall_fscore_support(y_t, y_hat, labels=[0, 1, 2, 3], average=None)
+        f1_i = precision_recall_fscore_support(y_t, y_hat, labels=class_labels, average=None)
 
         # Store in output dataframes
         score = score.append(pd.Series({ul:score_i}))
@@ -261,11 +270,11 @@ def train_and_predict(X_in, y_in, unlabeled_ids, clf=None):
 
     return pred, score, fm, f1
 
-def upsample_minority(X_in, y_in, yb, min_lab=3, n_classes=4):
+def upsample_minority(X_in, y_in, yb, maj_lab=2, n_classes=3):
     """Create upsampled versions to balance classes."""
     # Upsample minority classes
-    X_maj = X_in.loc[y_in.label == 3] # majority (y_in.label.value_counts())
-    y_maj = yb.loc[y_in.label == 3]
+    X_maj = X_in.loc[y_in.label == maj_lab] # majority (y_in.label.value_counts())
+    y_maj = yb.loc[y_in.label == maj_lab]
     X_min_u = []
     y_min_u = []
     for i in range(n_classes-1):
@@ -283,15 +292,6 @@ def upsample_minority(X_in, y_in, yb, min_lab=3, n_classes=4):
     X = pd.concat([X_maj] + X_min_u)
     y = pd.concat([y_maj] + y_min_u)
     return X, y
-
-def inverse_binarize(yb):
-    """Inverse binarize."""
-    y = yb[[0]].copy()
-    y.loc[yb[0] == 1] = 0
-    y.loc[yb[1] == 1] = 1
-    y.loc[yb[2] == 1] = 2
-    y.loc[yb[3] == 1] = 3
-    return y
 
 #==============================================================================
 #==============================================================================

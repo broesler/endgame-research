@@ -1,6 +1,6 @@
 #!/Users/bernardroesler/anaconda3/envs/insight/bin/python3
 #==============================================================================
-#     File: eda_plots.py
+#     File: eda_bulk_plots.py
 #  Created: 06/13/2018, 15:11
 #   Author: Bernie Roesler
 #
@@ -40,7 +40,7 @@ feat_cols = ['age_at_exit', 'milestones', 'latitude', 'longitude', 'offices',
 #              'partial', 'post_ipo_debt', 'post_ipo_equity', 'private_equity',
 #              'secondary_market', 'seed', 'unattributed']
 
-classes = ['Failed', 'Timely Exit', 'Late Exit', 'Slow Growth']
+classes = ['Timely Exit', 'Late Exit', 'Slow Growth']
 
 df['age_at_exit_years'] = df.age_at_exit / 365
 
@@ -73,8 +73,8 @@ sns.set_context('poster')
 fig = plt.figure(2)
 plt.clf()
 ax = plt.gca()
-ax.bar(x=classes, height=y_test.label.value_counts().loc[np.arange(4)],
-        color=['C3', 'C2', 'C1', 'C0'])
+ax.bar(x=classes, height=y_test.label.value_counts().loc[np.arange(len(classes))],
+        color=['C2', 'C1', 'C0'])
 # ax.set_aspect('equal')
 # plt.legend(classes, bbox_to_anchor=(1.05, 1), loc=2)
 ax.set_ylabel('Number of companies')

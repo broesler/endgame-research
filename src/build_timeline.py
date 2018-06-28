@@ -129,6 +129,7 @@ tf['event_id'] = 'founded'
 query = """
 SELECT o.id,
        f.funded_at AS dates,
+       f.raised_amount_usd AS famt,
        f.participants AS investors
 FROM cb_objects AS o 
 JOIN cb_funding_rounds AS f 

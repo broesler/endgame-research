@@ -13,9 +13,13 @@ import pandas as pd
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy
 
+from sklearn.preprocessing import label_binarize
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import SVC
 
 from timeline_features import make_labels, make_features_dict, train_and_predict
@@ -57,13 +61,13 @@ df_test = df[df.id.isin(tf_test.id)]
 # Label data
 y_train = make_labels(tf_train, df_train)
 y_test = make_labels(tf_test, df_test)
-pickle.dump(y_test, open('../data/y_labels_median_0std.pkl', 'wb'))
+# pickle.dump(y_test, open('../data/y_labels_median_0std.pkl', 'wb'))
 
 # TODO Calculate score on CHANGED values between train and test set unknowns
 # TODO ONLY have to run predictions on CHANGED unknowns!!
 # Instead of returning unlabeled ids, we can just provide a list over which to
 # loop (should be ~5,000)
-unlab_train = y_train.loc[y_train.label == 4]
+unlab_train = y_train.loc[y_train.label == 3]
 unlab_test = y_test.loc[y_test.id.isin(unlab_train.id)]
 unlab_diff = sum((unlab_train.label - unlab_test.label) > 0)
 
@@ -77,26 +81,34 @@ unlab_diff = sum((unlab_train.label - unlab_test.label) > 0)
 print('Building feature matrices...')
 # X_train, unlabeled_ids_train, ages_train = make_features_dict(tf_train, df_train, y_train)
 X_test, unlabeled_ids_test, ages_test = make_features_dict(tf_test, df_test, y_test)
+# pickle.dump([X_test, y_test, unlabeled_ids_test, clf], open('../data/train_inputs_N5.pkl', 'wb'))
 
 # n_neighbors = 5
 # clf = KNeighborsClassifier(n_neighbors=n_neighbors)
-clf = SVC(kernel='rbf', C=1) # gamma='auto' --> 1/n_features
+clf = OneVsRestClassifier(SVC(kernel='rbf', C=1)) # gamma='auto' --> 1/n_features
 print('Training...')
 # pred_train, score_train = train_and_predict(X_train, y_train, unlabeled_ids_train, clf)
 pred_test, score_test, fm_test, f1_test = train_and_predict(X_test, y_test, unlabeled_ids_test, clf)
 
 # filename = '../data/timeline_output_test_full_knn{}.pkl'.format(n_neighbors)
+# filename = '../data/timeline_output_test_svc_N5.pkl'
+# print('Writing to file {}...'.format(filename))
 # pickle.dump([pred_test, ages_test, score_test, f1_test, fm_test], open(filename, 'wb'))
 
-# Get feature matrix for max
-# key_age_max = max(ages_test, key=(lambda key: ages_test[key]))
-# X_max = X_test[key_age_max]
 
 # Confusion matrix
 # p_test = pred_test.copy()
 # p_test['id'] = p_test.index
 # p_test.reset_index(drop=True, inplace=True)
 #
+# def inverse_binarize(yb):
+#     """Inverse binarize."""
+#     y = yb[[0]].copy()
+#     y.loc[yb[0] == 1] = 0
+#     y.loc[yb[1] == 1] = 1
+#     y.loc[yb[2] == 1] = 2
+#     y.loc[yb[3] == 1] = 3
+#     return y
 # confusion_matrix(y_test.loc[y_test.id.isin(pred_test.index), 'label'], inverse_binarize(pred_test))
 
 #------------------------------------------------------------------------------ 
@@ -119,5 +131,6 @@ pred_test, score_test, fm_test, f1_test = train_and_predict(X_test, y_test, unla
 # >>> sum((unlab.label - unlab_test.label) > 0)
 # === 5615
 
+print('done.')
 #==============================================================================
 #==============================================================================

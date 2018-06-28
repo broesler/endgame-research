@@ -221,9 +221,6 @@ def train_and_predict(X_in, y_in, unlabeled_ids, clf=None):
     if clf is None:
         clf = KNeighborsClassifier(n_neighbors=n_neighbors)
 
-    # One-hot encode labels for kNN classifier
-    yb = known_one_hot(y_in)
-
     for _, ul in unlabeled_ids.iteritems():
         print('{:3d} Training model for {}'.format(count, ul))
         # Split out unknown and get similarity of single vector
@@ -238,10 +235,13 @@ def train_and_predict(X_in, y_in, unlabeled_ids, clf=None):
         # sim_idx = C[ul].iloc[idx[0:6]].index
         # pred[ul] = y_in.loc[sim_idx[0]]
 
-        X, y = upsample_minority(X, y_in, yb, maj_lab=2)
+        X, y = upsample_minority(X, y_in, maj_lab=2)
+
+        # One-hot encode labels for kNN classifier
+        yb = known_one_hot(y)
 
         # Don't use "train", "test" here to avoid over-writing previous time break
-        X_tr, X_t, y_tr, y_t = train_test_split(X, y, train_size=0.6, 
+        X_tr, X_t, y_tr, y_t = train_test_split(X, yb, train_size=0.6, 
                                                 stratify=y,
                                                 random_state=56)
 
@@ -270,11 +270,11 @@ def train_and_predict(X_in, y_in, unlabeled_ids, clf=None):
 
     return pred, score, fm, f1
 
-def upsample_minority(X_in, y_in, yb, maj_lab=2, n_classes=3):
+def upsample_minority(X_in, y_in, maj_lab=2, n_classes=3):
     """Create upsampled versions to balance classes."""
     # Upsample minority classes
     X_maj = X_in.loc[y_in.label == maj_lab] # majority (y_in.label.value_counts())
-    y_maj = yb.loc[y_in.label == maj_lab]
+    y_maj = y_in.loc[y_in.label == maj_lab]
     X_min_u = []
     y_min_u = []
     for i in range(n_classes-1):
@@ -283,7 +283,7 @@ def upsample_minority(X_in, y_in, yb, maj_lab=2, n_classes=3):
                             replace=True, 
                             n_samples=X_maj.shape[0],
                             random_state=56))
-        y_min_u.append(resample(yb.loc[y_in.label == i], 
+        y_min_u.append(resample(y_in.loc[y_in.label == i], 
                             replace=True, 
                             n_samples=X_maj.shape[0],
                             random_state=56))

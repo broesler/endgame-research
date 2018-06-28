@@ -85,7 +85,8 @@ X_test, unlabeled_ids_test, ages_test = make_features_dict(tf_test, df_test, y_t
 
 # n_neighbors = 5
 # clf = KNeighborsClassifier(n_neighbors=n_neighbors)
-clf = OneVsRestClassifier(SVC(kernel='rbf', C=1)) # gamma='auto' --> 1/n_features
+# clf = OneVsRestClassifier(SVC(kernel='rbf', C=1)) # gamma='auto' --> 1/n_features
+clf = SVC(kernel='rbf', C=100) # gamma='auto' --> 1/n_features
 print('Training...')
 # pred_train, score_train = train_and_predict(X_train, y_train, unlabeled_ids_train, clf)
 pred_test, score_test, fm_test, f1_test = train_and_predict(X_test, y_test, unlabeled_ids_test, clf)

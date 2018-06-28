@@ -57,10 +57,10 @@ y_max = y_test.loc[~y_test.id.isin(unlabeled_ids_test)]
 #                     hue='label')
 # plt.show()
 
-yb = known_one_hot(y_max)
-X, y = upsample_minority(X_max[feat_cols], y_max, yb, maj_lab=2)
-params = {'estimator__C': scipy.stats.expon(scale=100), 
-          'estimator__gamma': scipy.stats.expon(scale=0.1)}
+X, y = upsample_minority(X_max[feat_cols], y_max, maj_lab=2)
+# yb = known_one_hot(y)
+params = {'C': scipy.stats.expon(scale=100), 
+          'gamma': scipy.stats.expon(scale=0.1)}
 
 # Utility function to report best scores
 def report(results, n_top=3):
@@ -74,13 +74,15 @@ def report(results, n_top=3):
             print("Parameters: {0}".format(results['params'][candidate]))
             print("")
 
+clf = SVC(kernel='rbf', C=100) # gamma='auto' --> 1/n_features
+
 # run randomized search
 n_iter_search = 20
 random_search = RandomizedSearchCV(clf, param_distributions=params,
                                    n_iter=n_iter_search, scoring='f1_macro')
 
 start = time()
-random_search.fit(X, y)
+random_search.fit(X, y.label)
 print("RandomizedSearchCV took %.2f seconds for %d candidates"
       " parameter settings." % ((time() - start), n_iter_search))
 report(random_search.cv_results_)

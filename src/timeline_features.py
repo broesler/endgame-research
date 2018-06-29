@@ -70,7 +70,7 @@ def make_labels(tf, df):
     # Everything else is a "young company"
     y.fillna(value=3, inplace=True)
 
-    return y
+    return y, threshold
 
 def make_feat_cols(X, tf, label):
     """Add mean time to event and number of events to features."""

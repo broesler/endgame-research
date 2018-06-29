@@ -36,9 +36,9 @@ tf, df = pickle.load(open(filename, 'rb'))
 TODAY = tf.dates.max() # most recent date in timeline
 
 # Label data
-# Y = make_labels(tf, df)
-# pickle.dump(Y, open('../data/y_labels_median_0std.pkl', 'wb'))
-Y = pickle.load(open('../data/y_labels_median_0std.pkl', 'rb'))
+# Y, threshold = make_labels(tf, df)
+# pickle.dump([Y, threshold], open('../data/y_labels_median_0std.pkl', 'wb'))
+Y, threshold = pickle.load(open('../data/y_labels_median_0std.pkl', 'rb'))
 
 # Get unlabeled companies ("young companies")
 unlabeled_ids = Y.loc[Y.label == 3].id
@@ -61,10 +61,10 @@ tf_lab = tf.loc[tf.id.isin(labeled_ids)]
 df_lab = df.loc[df.id.isin(labeled_ids)]
 
 count = 0
-MAX_COUNT = 1
+MAX_COUNT = 1200
+n_neighbors = 5
 
-# for _, ul in unlabeled_ids.iteritems():
-for ul in ['c:516']:
+for _, ul in unlabeled_ids.iteritems():
     #-------------------------------------------------------------------------- 
     #        Build Features
     #--------------------------------------------------------------------------
@@ -90,11 +90,11 @@ for ul in ['c:516']:
     s = X_aug.loc[X_aug.id == ul, feat_cols].copy() # (m, 1) features of unknown company
     X = X_aug.loc[X_aug.id != ul, feat_cols].copy() # (Nl, m) features of labeled companies
 
-    # Simple model:
+    # Cosine-similarity for unlabeled->labeled
     C = similarity(s, X) # (m, 1) similarity vector
     # To predict: use single nearest neighbor with cosine similarity
     idx = C.values.argsort(axis=0).squeeze()[::-1] # array shape (m,) descending
-    sim_idx[ul] = C.iloc[idx[0:6]].index
+    sim_idx[ul] = df.loc[df.id == ul].index.append(C.iloc[idx[:n_neighbors]].index)
 
     # When we build the X matrix, the index is unaligned from y, so we need to
     # realign the values according to the id column
@@ -131,7 +131,7 @@ for ul in ['c:516']:
 #------------------------------------------------------------------------------
 tf_fund = tf.loc[tf.event_id == 'funded', ['id', 'dates', 'famt_cumsum', 'time_to_event']]
 # Dummy out:
-sim_idx = {'c:516': pd.Int64Index([3177, 3373, 18874, 3630, 14942, 14504], dtype='int64')}
+# sim_idx = {'c:516': pd.Int64Index([3177, 3373, 18874, 3630, 14942, 14504], dtype='int64')}
 filename = '../data/flask_db.pkl'
 print('Writing to file {}...'.format(filename))
 pickle.dump([pred, sim_idx, df, tf_fund, y], open(filename, 'wb'))

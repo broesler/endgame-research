@@ -78,7 +78,11 @@ def plot_timelines(si):
 # The home page
 @app.route('/')
 def endgame_input():
-    return render_template('index.html', company_names=company_names)
+    return render_template('index.html', title='Home', company_names=company_names)
+
+@app.route('/search')
+def endgame_search():
+    return render_template('search.html', title='Search', company_names=company_names)
 
 # The good stuff
 @app.route('/output')
@@ -147,7 +151,8 @@ def endgame_output():
     script, div = components(plot)
 
     # TODO fp needs better names, descriptions (footnotes?)
-    return render_template('output.html', company_names=company_names,
+    return render_template('output.html', title='Results', 
+                           company_names=company_names,
                            company_message=company_message,
                            comps=comps, plot_script=script,
                            plot_div=div, js_resources=js_resources,

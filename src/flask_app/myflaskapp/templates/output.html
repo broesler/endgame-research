@@ -1,147 +1,66 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
-    <meta name="description" content="">
-    <meta name="author" content="">
-    <link rel="icon" href="../../favicon.ico">
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="starter-template">
+    <h2>EndGame Results</h2>
+  </div>
 
-    <title>Results | EndGame</title>
+  <div class = "container">
+    <div class = "container">
+      <!--Make sure the form has the autocomplete function switched off:-->
+      <!-- <form action="/output" method="GET" autocomplete="off"> -->
+      <form action="/output" method="GET">
+        <div class="form-group">
+          <label for="company_name">Company Name:</label>
+          <input type="text" id="company_name" name='company_name' placeholder="e.g. Square">
+        </div>
+        <div>
+          <button type="submit" class="btn btn-default btn-lg">Go!</button>
+        </div>
+      </form>
+    </div>
 
-    <!-- Bootstrap core CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
-
-    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
-    <link href="../../assets/css/ie10-viewport-bug-workaround.css" rel="stylesheet">
-
-    <!-- Custom styles for this template -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/starter-template.css') }}">
-
-    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
-    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
-    <script src="../../assets/js/ie-emulation-modes-warning.js"></script>
-
-    <!-- BOKEH NECESSARY -->
-    {{ js_resources|indent(4)|safe }}
-    {{ css_resources|indent(4)|safe }}
-    {{ plot_script|indent(4)|safe }}
-
-    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-    <!--[if lt IE 9]>
-      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
-      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-    <![endif]-->
-  </head>
-
-  <body>
-
-    <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
-      <a class="navbar-brand" href="/">EndGame</a>
-      <button class="navbar-toggler" type="button" data-toggle="collapse"
-        data-target="#navbarsExampleDefault"
-        aria-controls="navbarsExampleDefault" aria-expanded="false"
-        aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarsExampleDefault">
-        <ul class="navbar-nav mr-auto">
-          <li class="nav-item active">
-            <a class="nav-link" href="/">Home <span class="sr-only">(current)</span></a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="/about">About</a>
-          </li>
-        </ul>
-      </div>
-    </nav>
-
-  <br></br>
+    <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+  </div> <!-- /.container-->
 
   <div class="container">
     <div class="starter-template">
-      <h2>EndGame Results</h2>
+      <h3>Results:</h3>
+      <p class="lead">{{ company_message }}</p>
+    </div>
+  </div><!-- /.container -->
+
+  <div class="container">
+    <div class="starter-template">
+      <h3>Similar companies:</h3>
+      <p class="lead">Based on your search, similar companies historically include:</p>
     </div>
 
-    <div class = "container">
-      <div class = "container">
-        <!--Make sure the form has the autocomplete function switched off:-->
-        <!-- <form action="/output" method="GET" autocomplete="off"> -->
-        <form action="/output" method="GET">
-          <div class="form-group">
-              <label for="company_name">Company Name:</label>
-              <input type="text" id="company_name" name='company_name' placeholder="e.g. Square">
-          </div>
-          <div>
-            <button type="submit" class="btn btn-default btn-lg">Go!</button>
-          </div>
-        </form>
-      </div>
+    <table class="table table-hover">
+      <tr><th>Name</th>
+        <th>Category</th>
+        <th>Founded</th>
+        <th>Status</th></tr>
+      {% for index, comp in comps.iterrows() %}
+      <tr><td>{{ comp['name'] }}</td>
+        <td>{{ comp['category_code'] }}</td>
+        <td>{{ comp['dates'].strftime('%m/%d/%Y') }}</td>
+        <td>{{ comp['status'] }}</td>
+      </tr>
+      {% endfor %}
+    </table>
 
-      <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
-      <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
-    </div> <!-- /.container-->
-
-    <br></br>
-
-    <div class="container">
-      <div class="starter-template">
-        <h3>Results:</h3>
-        <p class="lead">{{ company_message }}</p>
-      </div>
-    </div><!-- /.container -->
-
-    <div class="container">
-      <div class="starter-template">
-        <h3>Similar companies:</h3>
-        <p class="lead">Based on your search, similar companies to research
-        include:</p>
-      </div>
-
-      <table class="table table-hover">
-        <tr><th>Name</th>
-          <th>Category</th>
-          <th>Founded</th>
-          <th>Status</th></tr>
-        {% for index, comp in comps.iterrows() %}
-        <tr><td>{{ comp['name'] }}</td>
-            <td>{{ comp['category_code'] }}</td>
-            <td>{{ comp['dates'].strftime('%m/%d/%Y') }}</td>
-            <td>{{ comp['status'] }}</td>
-        </tr>
-        {% endfor %}
-      </table>
-
-      <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
-      <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
-    </div><!-- /.container -->
-
-    <br></br>
-
-     <!-- Make the Bokeh plot!! -->
-     <div class="container">
-       <div class="starter-template">
-         <h3>Company Funding Trajectories</h3>
-          {{ plot_div|indent(4)|safe }}
-       </div><!-- /.starter-template -->
-     </div><!-- /.container -->
-
-    <!-- Set up autocomplete variable of company names -->
-    <script type="text/javascript">
-      var company_names = {{ company_names|safe }}
-    </script>
-    <script type="text/javascript" src="{{ url_for('static', filename='js/autocomplete.js') }}"></script>
-
-    <!-- Bootstrap core JavaScript
-    ================================================== -->
-    <!-- Placed at the end of the document so the pages load faster -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
     <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
-    <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
-    <script src="../../dist/js/bootstrap.min.js"></script>
-    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
-    <script src="../../assets/js/ie10-viewport-bug-workaround.js"></script>
-  </body>
-</html>
+  </div><!-- /.container -->
+
+  <!-- Make the Bokeh plot!! -->
+  <div class="container">
+    <div class="starter-template">
+      <h3>Company Funding Trajectories</h3>
+      {{ plot_div|indent(4)|safe }}
+    </div><!-- /.starter-template -->
+  </div><!-- /.container -->
+</div><!-- /.container -->
+{% endblock %}

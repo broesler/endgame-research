@@ -68,20 +68,20 @@ def report(results, n_top=3):
             print("Parameters: {0}".format(results['params'][candidate]))
             print("")
 
-clf = KNeighborsClassifier(n_jobs=10)
-params = {'n_neighbors': np.arange(1, 50),
-          'weights': ['uniform', 'distance']}
+# clf = KNeighborsClassifier(n_jobs=10)
+# params = {'n_neighbors': np.arange(1, 50),
+#           'weights': ['uniform', 'distance']}
 
 # clf = SVC(kernel='rbf', C=100)
 # params = {'C': scipy.stats.expon(scale=100), 
 #           'gamma': scipy.stats.expon(scale=0.1)}
 # y_train = lb.inverse_transform(y_train.values) # SVM needs normal values
 
-# clf = RandomForestClassifier(n_jobs=10)
-# params = {'max_depth': [3, 5, None],
-#           'max_features': randint(1, 2*np.sqrt(X.shape[1])),
-#           'min_samples_split': randint(2, 51),
-#           'criterion': ['gini', 'entropy']}
+clf = RandomForestClassifier(n_jobs=10)
+params = {'max_depth': [3, 5, None],
+          'max_features': randint(1, 2*np.sqrt(X.shape[1])),
+          'min_samples_split': randint(2, 51),
+          'criterion': ['gini', 'entropy']}
 
 # run randomized search
 n_iter_search = 50
@@ -89,12 +89,12 @@ random_search = RandomizedSearchCV(clf, param_distributions=params,
                                    n_iter=n_iter_search, scoring='f1_macro',
                                    verbose=10, n_jobs=10)
 
-
-# start = time()
-# random_search.fit(X_train, y_train)
-# print("RandomizedSearchCV took %.2f seconds for %d candidates"
-#       " parameter settings." % ((time() - start), n_iter_search))
-# report(random_search.cv_results_)
+# Run the test!
+start = time()
+random_search.fit(X_train, y_train)
+print("RandomizedSearchCV took %.2f seconds for %d candidates"
+      " parameter settings." % ((time() - start), n_iter_search))
+report(random_search.cv_results_)
 
 # Try Top-performing on test set
 # Parameters: {'criterion': 'entropy', 'max_depth': None, 'max_features': 4, 'min_samples_split': 3}

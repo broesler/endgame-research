@@ -89,16 +89,7 @@
     <div class="container">
       <div class="starter-template">
         <h3>Results:</h3>
-        <p class="lead">{{ company_name }} will {{ status }}!</p>
-        <!-- <p>The 5 most important features in the analysis were:</p> -->
-        <!-- <table class="table table&#45;hover"> -->
-        <!--   <tr> <th>Feature</th> <th>Importance</th> </tr> -->
-        <!--   {% for feat in fp[:5] %} -->
-        <!--   <tr><td>{{ feat[0].replace('_', ' ') }}</td> -->
-        <!--     <td>{{ "{:0.2f}%".format(100*feat[1]) }}</td> -->
-        <!--   </tr> -->
-        <!--   {% endfor %} -->
-        <!-- </table> -->
+        <p class="lead">{{ company_message }}</p>
       </div>
     </div><!-- /.container -->
 
@@ -116,8 +107,8 @@
           <th>Status</th></tr>
         {% for index, comp in comps.iterrows() %}
         <tr><td>{{ comp['name'] }}</td>
-            <td>{{ comp['category_code']}}</td>
-            <td>{{ comp['founded_at'].strftime('%m/%d/%Y') }}</td>
+            <td>{{ comp['category_code'] }}</td>
+            <td>{{ comp['dates'].strftime('%m/%d/%Y') }}</td>
             <td>{{ comp['status'] }}</td>
         </tr>
         {% endfor %}
@@ -129,7 +120,7 @@
 
     <br></br>
 
-     <!-- Make the plot!! -->
+     <!-- Make the Bokeh plot!! -->
      <div class="container">
        <div class="starter-template">
          <h3>Company Funding Trajectories</h3>

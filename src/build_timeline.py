@@ -144,6 +144,10 @@ rf['event_id'] = 'funded'
 # Append events to timeline (essentially an inner join with newest data)
 tf = tf[tf.id.isin(rf.id)].append(rf, ignore_index=True)
 
+tf['famt_cumsum'] = tf.loc[tf.event_id == 'funded']\
+                      .sort_values('dates')\
+                      .groupby('id')['famt'].cumsum()
+
 # company age at acquisition
 query = """
 SELECT o.id,

@@ -11,7 +11,6 @@
 
 from myflaskapp import app
 from flask import render_template
-# Take user input
 from flask import request
 
 from bokeh.plotting import figure
@@ -25,16 +24,26 @@ import pandas as pd
 import numpy as np
 import pickle
 
-from sklearn.metrics.pairwise import cosine_similarity
-
-# Import our model:
-# NOTE need to run "../run.py" from "flaskexample" in order to find 'a_Model'
-
 # Load the data!
 data_path = './data/'
-pred, sim_idx, df, tf_fund, y = pickle.load(open(data_path + 'flask_db.pkl', 'rb'))
-# List of company names for autocompletion
-company_names = json.dumps(list(df.name.values))
+# pred, sim_idx, feat_imp, df, tf_fund, y = pickle.load(open(data_path + 'flask_db_full.pkl', 'rb'))
+pred, sim_idx, _, tf_fund, y = pickle.load(open(data_path + 'flask_db_full.pkl', 'rb'))
+tf, df = pickle.load(open(data_path + 'cb_input_datasets_full.pkl', 'rb'))
+# List of company names for autocompletion (limit to startups!!)
+company_names = json.dumps(list(df.loc[df.id.isin(pred.index), 'name'].values))
+
+# TODO convert df.category to "display" names 
+
+# NOTE won't need these lines with new database
+pred[['proba0', 'proba1', 'proba2']] = pd.DataFrame(pred.probas.values.tolist(), index=pred.index)
+pred.drop(columns='probas', inplace=True)
+
+# Date of last funding event
+tf_last_fund = tf_fund.groupby(['id'], as_index=False).max()
+
+# i_start = 0     # Index of list to start on (init to top)
+# N_display = 10  # Number of startups to display on homepage
+# N_similar = 6   # Number of historical companies to show for comparison
 
 def get_company_id(company_name):
     """Get company index from name."""
@@ -53,21 +62,20 @@ def plot_timelines(si):
                x_axis_label='Time [years]',
                y_axis_label='Funding Amt [$]')
     colors = color_gen()
-    # TODO hover tips with series info + valuation
-    # TODO Click to highlight lines
-    # TODO Shaded under curve
-    for i, color in zip(range(len(si)), colors):
-        s = si[i]
+    # for i, color in zip(range(len(si)), colors):
+        # TODO ERROR HANDLING!!! Not all companies have funding amounts!!
+        # fillna values??
+        # s = si[i]
         # Get cid from df
-        cid = df.loc[s].id
-        the_co = tf_fund.loc[tf_fund.id == cid].sort_values('dates')
-        # Add [0,0] point
-        time_to_funding = pd.Series(0, index=[the_co.index[0]])\
-                            .append(the_co.time_to_event) / 365
-        raised_amount_usd = pd.Series(0, index=[the_co.index[0]])\
-                            .append(the_co.famt_cumsum)
-        p.line(time_to_funding, raised_amount_usd,
-               line_width=3, color=color, legend=df.loc[s, 'name'])
+        # cid = df.loc[s].id
+        # the_co = tf_fund.loc[tf_fund.id == cid].sort_values('dates')
+        # # Add [0,0] point
+        # time_to_funding = pd.Series(0, index=[the_co.index[0]])\
+        #                     .append(the_co.time_to_event) / 365
+        # raised_amount_usd = pd.Series(0, index=[the_co.index[0]])\
+        #                     .append(the_co.famt_cumsum)
+        # p.line(time_to_funding, raised_amount_usd,
+        #        line_width=3, color=color, legend=df.loc[s, 'name'])
         # p.circle(time_to_funding, raised_amount_usd,
         #          line_color=color, fill_color='white', size=8)
     return p
@@ -77,8 +85,19 @@ def plot_timelines(si):
 #------------------------------------------------------------------------------
 # The home page
 @app.route('/')
+@app.route('/index')
 def endgame_input():
-    return render_template('index.html', title='Home', company_names=company_names)
+    # Sort list of companies predicted to exit quickly by probability
+    exits = pred.loc[pred.pred == 0].copy()
+    exits.sort_values('proba0', ascending=False, inplace=True)
+    top_exit_ids = exits.iloc[app.config['I_START']:app.config['N_DISPLAY']].index
+    # Get general info
+    top_exits = df.loc[df.id.isin(top_exit_ids)].copy()
+    top_exits.rename(columns={'dates':'founding_date'}, inplace=True)
+    # Get funding info
+    top_exits = top_exits.merge(tf_last_fund.loc[tf_last_fund.id.isin(top_exit_ids)], on='id')
+    top_exits.rename(columns={'dates':'last_funding_date'}, inplace=True)
+    return render_template('index.html', title='Home', top_exits=top_exits)
 
 @app.route('/search')
 def endgame_search():
@@ -91,9 +110,17 @@ def endgame_output():
     company_name = request.args.get('company_name')
     cid = get_company_id(company_name)
 
+    js_resources = None
+    css_resources = None
+    comps = None
+    script = None
+    div = None
+
     # Get prediction class
-    if cid in pred.index:
-        pred_class = pred.loc[cid].idxmax() # [0, 1, 2, 3]
+    is_startup = (cid in pred.index)
+
+    if is_startup:
+        pred_class = pred.loc[cid, 'pred']
         if pred_class == 0:
             message = ' will exit in a timely fashion!'
         elif pred_class == 1:
@@ -101,16 +128,27 @@ def endgame_output():
         elif pred_class == 2:
             message = ' will continue operating without exit.'
         else:
-            message = 'Oops! It doesn\'t look like we have a prediction for that company.'
+            message = ': Oops! It doesn\'t look like we have a prediction for that company.'
+
+        # Get list of similar company ids
+        try:
+            si = sim_idx[cid] # actual pandas integer indices
+            comps = df.loc[si[1:app.config['N_SIMILAR']], ['name', 'category_code', 'dates', 'status']]
+        except KeyError as e:
+            return render_template('500.html', error=e)
+
+        # Make plot!
+        plot = plot_timelines(si[::-1])
+        # grab the static resources
+        js_resources = INLINE.render_js()
+        css_resources = INLINE.render_css()
+        # Embed plot into HTML via Flask Render
+        script, div = components(plot)
 
     else: # get current company status
         status = df.loc[df.id == cid].status.values
         label = y.loc[y.id == cid].label.values
-        if status == 'closed':
-            message = ' has closed their doors. '
-            if label == 2:
-                message += company_name + ' was a slow growth company.'
-        elif status == 'operating':
+        if status == 'operating':
             message = ' continues to operate.'
         elif status == 'ipo':
             the_date = tf.loc[(tf.id == cid) & (tf.event_id == 'public')]\
@@ -129,31 +167,17 @@ def endgame_output():
             elif label == 1:
                 message += ' ' + company_name + ' exited after the median age for its industry.'
         else:
-            message = 'Oops! It doesn\'t look like we have any information on that company.'
+            message = ': Oops! It doesn\'t look like we have any information on that company.'
 
     # Jinja that shit
     company_message = company_name + message
 
-    # Get list of similar company ids
-    try:
-        si = sim_idx[cid] # actual pandas integer indices
-        # TODO get similarity matrix for all labeled companies
-        comps = df.loc[si[1:], ['name', 'category_code', 'dates', 'status']]
-    except KeyError as e:
-        return render_template('500.html', error=e)
-
-    # Make plot!
-    plot = plot_timelines(si[::-1])
-    # grab the static resources
-    js_resources = INLINE.render_js()
-    css_resources = INLINE.render_css()
-    # Embed plot into HTML via Flask Render
-    script, div = components(plot)
 
     # TODO fp needs better names, descriptions (footnotes?)
     return render_template('output.html', title='Results', 
                            company_names=company_names,
                            company_message=company_message,
+                           is_startup=is_startup,
                            comps=comps, plot_script=script,
                            plot_div=div, js_resources=js_resources,
                            css_resources=css_resources)

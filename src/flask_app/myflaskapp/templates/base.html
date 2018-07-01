@@ -10,9 +10,9 @@
     <link rel="icon" href="../../favicon.ico">
 
     {% if title %}
-        <title>{{ title }} | EndGame</title>
+      <title>{{ title }} | EndGame</title>
     {% else %}
-        <title>EndGame</title>
+      <title>EndGame</title>
     {% endif %}
 
     <!-- Bootstrap core CSS -->
@@ -59,13 +59,13 @@
       <div class="collapse navbar-collapse" id="navbarsExampleDefault">
         <ul class="navbar-nav mr-auto">
           <li class="nav-item active">
-            <a class="nav-link" href="/">Home <span class="sr-only">(current)</span></a>
+            <a class="nav-link" href="{{ url_for('endgame_input') }}">Home <span class="sr-only">(current)</span></a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/search">Search</a>
+            <a class="nav-link" href="{{ url_for('endgame_search') }}">Search</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/about">About</a>
+            <a class="nav-link" href="{{ url_for('endgame_about') }}">About</a>
           </li>
         </ul>
         <!-- failed attempted at search bar - autocomplete suggestions need to

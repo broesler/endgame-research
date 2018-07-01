@@ -1,21 +1,18 @@
 #!/Users/bernardroesler/anaconda3/envs/insight/bin/python3
 #==============================================================================
-#     File: __init__.py
-#  Created: 06/18/2018, 20:41
+#     File: config.py
+#  Created: 07/01/2018, 15:04
 #   Author: Bernie Roesler
 #
 """
-  Description: Flask initialization file
+  Description: Configuration for myflaskapp
 """
 #==============================================================================
 
-from flask import Flask
-from config import Config
-
-app = Flask(__name__)
-app.config.from_object(Config)
-
-from myflaskapp import views
+class Config(object):
+    I_START = 0     # Index of list to start on (init to top)
+    N_DISPLAY = 10  # Number of startups to display on homepage
+    N_SIMILAR = 6   # Number of historical companies to show for comparison
 
 #==============================================================================
 #==============================================================================

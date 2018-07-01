@@ -31,6 +31,7 @@
     </div>
   </div><!-- /.container -->
 
+  {% if is_startup %}
   <div class="container">
     <div class="starter-template">
       <h3>Similar companies:</h3>
@@ -43,7 +44,8 @@
         <th>Founded</th>
         <th>Status</th></tr>
       {% for index, comp in comps.iterrows() %}
-      <tr><td>{{ comp['name'] }}</td>
+      <tr onclick="window.location='{{ url_for('endgame_output') + '?company_name=' + comp['name'] }}';">
+        <td>{{ comp['name'] }}</td>
         <td>{{ comp['category_code'] }}</td>
         <td>{{ comp['dates'].strftime('%m/%d/%Y') }}</td>
         <td>{{ comp['status'] }}</td>
@@ -62,5 +64,6 @@
       {{ plot_div|indent(4)|safe }}
     </div><!-- /.starter-template -->
   </div><!-- /.container -->
+  {% endif %}
 </div><!-- /.container -->
 {% endblock %}

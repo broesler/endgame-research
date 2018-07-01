@@ -9,8 +9,7 @@
   <div class="container">
     <div class="container">
       <!--Make sure the form has the autocomplete function switched off:-->
-      <form action="/output" method="GET" autocomplete="off">
-        <!-- <form action="/output" method="GET"> -->
+      <form action="{{ url_for('endgame_output') }}" method="GET" autocomplete="off">
         <div class="form-group">
           <label for="company_name">Company Name:</label>
           <input type="text" id="company_name" name='company_name' placeholder="e.g. Square">

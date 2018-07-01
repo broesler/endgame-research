@@ -77,7 +77,7 @@ def report(results, n_top=3):
 #           'gamma': scipy.stats.expon(scale=0.1)}
 # y_train = lb.inverse_transform(y_train.values) # SVM needs normal values
 
-clf = RandomForestClassifier(n_jobs=10)
+clf = RandomForestClassifier(n_jobs=-1)
 params = {'max_depth': [3, 5, None],
           'max_features': randint(1, 2*np.sqrt(X.shape[1])),
           'min_samples_split': randint(2, 51),

@@ -13,7 +13,7 @@ import pandas as pd
 import numpy as np
 
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.preprocessing import StandardScaler, label_binarize
+from sklearn.preprocessing import StandardScaler, LabelBinarizer, label_binarize
 from sklearn.utils import resample
 
 # feat_cols = ['latitude', 'longitude', 'offices', 'products', 'experience',
@@ -36,8 +36,6 @@ def make_labels(tf, df):
     # What is a successful exit? 
     # "Exit" == acquisition or IPO before median age of
     # acquisition for a given industry
-    # NOTE workaround: groupby().std() does NOT work on timeseries64, but
-    # describe() does!?
     exits = tf.loc[(tf.event_id == 'public') | (tf.event_id == 'acquired')]\
               .merge(df, on='id', how='inner')
     g = exits.groupby('category_code')
@@ -135,10 +133,14 @@ def similarity(x, F):
 
 def known_one_hot(y, unk_lab=3):
     """Convert vector of known labels to one hot."""
-    y_lab = y[y.label != unk_lab]
-    yb = label_binarize(y_lab.label, classes=class_labels)
+    y_lab = y[y.label != unk_lab].label
+
+    # Binarize the labels
+    lb = LabelBinarizer()
+    yb = lb.fit_transform(y_lab)
+    # yb = label_binarize(y_lab.label, classes=class_labels)
     y = pd.DataFrame(data=yb, index=y_lab.index)
-    return y
+    return y, lb
 
 def upsample_minority(X_in, y_in, maj_lab=2, n_classes=3):
     """Create upsampled versions to balance classes."""

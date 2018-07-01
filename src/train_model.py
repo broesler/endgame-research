@@ -9,6 +9,9 @@
 """
 #==============================================================================
 
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 import pandas as pd
 import pickle
 import numpy as np
@@ -54,15 +57,15 @@ fm = pd.Series()
 sim_idx = {}
 
 clf = RandomForestClassifier(criterion='entropy', max_depth=None, 
-                             max_features=4, min_samples_split=3, n_jobs=10)
+                             max_features=4, min_samples_split=3, n_jobs=-1)
 
 # Build dictionary of feature matrices. One per unlabeled company
 tf_lab = tf.loc[tf.id.isin(labeled_ids)]
 df_lab = df.loc[df.id.isin(labeled_ids)]
 
 count = 0
-MAX_COUNT = 1200
-n_neighbors = 5
+MAX_COUNT = unlabeled_ids.shape[0]
+# n_neighbors = 5
 
 for _, ul in unlabeled_ids.iteritems():
     #-------------------------------------------------------------------------- 
@@ -94,12 +97,13 @@ for _, ul in unlabeled_ids.iteritems():
     C = similarity(s, X) # (m, 1) similarity vector
     # To predict: use single nearest neighbor with cosine similarity
     idx = C.values.argsort(axis=0).squeeze()[::-1] # array shape (m,) descending
-    sim_idx[ul] = df.loc[df.id == ul].index.append(C.iloc[idx[:n_neighbors]].index)
+    # sim_idx[ul] = df.loc[df.id == ul].index.append(C.iloc[idx[:n_neighbors]].index)
+    sim_idx[ul] = df.loc[df.id == ul].index.append(C.iloc[idx].index)
 
     # When we build the X matrix, the index is unaligned from y, so we need to
     # realign the values according to the id column
     X, y_up = upsample_minority(X, y, maj_lab=2)
-    yb = known_one_hot(y_up)
+    yb, lb = known_one_hot(y_up)
 
     # Don't use "train", "test" here to avoid over-writing previous time break
     X_train, X_test, y_train, y_test = train_test_split(X, yb, train_size=0.6, 
@@ -109,14 +113,18 @@ for _, ul in unlabeled_ids.iteritems():
     # More advanced model: let the computer do the work
     clf.fit(X_train, y_train)
 
-    # Store in output dataframes
+    # Predict already-labeled data for testing
     y_hat = clf.predict(X_test)
     fm_i = precision_recall_fscore_support(y_test, y_hat, average='macro')
     fm = fm.append(pd.Series({ul:fm_i}))
 
-    # predict for the single unknown company!
-    pred_i = clf.predict(s).squeeze() # just get single vector
-    pred = pred.append(pd.DataFrame.from_dict({ul:pred_i}, orient='index'))
+    # Predict for single unknown company!
+    pred_i = int(lb.inverse_transform(clf.predict(s))) # get single label
+
+    # Store prediction probability for sorting/suggestions
+    proba_i = [x[0, 1] for x in clf.predict_proba(s)]
+
+    pred = pred.append(pd.DataFrame.from_dict({ul:{'pred':pred_i, 'probas':proba_i}}, orient='index'))
 
     count += 1
     if count == MAX_COUNT:
@@ -132,7 +140,7 @@ for _, ul in unlabeled_ids.iteritems():
 tf_fund = tf.loc[tf.event_id == 'funded', ['id', 'dates', 'famt_cumsum', 'time_to_event']]
 # Dummy out:
 # sim_idx = {'c:516': pd.Int64Index([3177, 3373, 18874, 3630, 14942, 14504], dtype='int64')}
-filename = '../data/flask_db.pkl'
+filename = '../data/flask_db_full.pkl'
 print('Writing to file {}...'.format(filename))
 pickle.dump([pred, sim_idx, df, tf_fund, y], open(filename, 'wb'))
 

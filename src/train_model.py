@@ -35,6 +35,11 @@ np.set_printoptions(precision=4, suppress=True)
 filename = '../data/cb_input_datasets_full.pkl'
 tf, df = pickle.load(open(filename, 'rb'))
 
+# Drop closed companies from amalysis
+closures = df.loc[df.status == 'closed', 'id']
+tf = tf.loc[~tf.id.isin(closures)]
+df = df.loc[~df.id.isin(closures)]
+
 # TODAY = '2013/12/12' # date of snapshot YYYY/MM/DD
 TODAY = tf.dates.max() # most recent date in timeline
 
@@ -55,6 +60,7 @@ y = Y.loc[Y.id.isin(labeled_ids)]
 pred = pd.DataFrame()
 fm = pd.Series()
 sim_idx = {}
+feat_imp = {}
 
 clf = RandomForestClassifier(criterion='entropy', max_depth=None, 
                              max_features=4, min_samples_split=3, n_jobs=-1)
@@ -64,8 +70,8 @@ tf_lab = tf.loc[tf.id.isin(labeled_ids)]
 df_lab = df.loc[df.id.isin(labeled_ids)]
 
 count = 0
-MAX_COUNT = unlabeled_ids.shape[0]
-# n_neighbors = 5
+# MAX_COUNT = unlabeled_ids.shape[0]
+MAX_COUNT = 1
 
 for _, ul in unlabeled_ids.iteritems():
     #-------------------------------------------------------------------------- 
@@ -97,7 +103,6 @@ for _, ul in unlabeled_ids.iteritems():
     C = similarity(s, X) # (m, 1) similarity vector
     # To predict: use single nearest neighbor with cosine similarity
     idx = C.values.argsort(axis=0).squeeze()[::-1] # array shape (m,) descending
-    # sim_idx[ul] = df.loc[df.id == ul].index.append(C.iloc[idx[:n_neighbors]].index)
     sim_idx[ul] = df.loc[df.id == ul].index.append(C.iloc[idx].index)
 
     # When we build the X matrix, the index is unaligned from y, so we need to
@@ -124,7 +129,17 @@ for _, ul in unlabeled_ids.iteritems():
     # Store prediction probability for sorting/suggestions
     proba_i = [x[0, 1] for x in clf.predict_proba(s)]
 
-    pred = pred.append(pd.DataFrame.from_dict({ul:{'pred':pred_i, 'probas':proba_i}}, orient='index'))
+    # Store feature importances
+    if hasattr(clf, 'feature_importances_'):
+        fp = dict(zip(feat_cols, clf.feature_importances_))
+        fp = [(k, fp[k]) for k in sorted(fp, key=fp.get, reverse=True)]
+        feat_imp[ul] = fp
+
+    probas_dict = {'proba{:d}'.format(i):v for i, v in enumerate(proba_i)} 
+    probas_dict['pred'] = pred_i
+
+    # pred = pred.append(pd.DataFrame.from_dict({ul:{'pred':pred_i, 'probas':proba_i}}, orient='index'))
+    pred = pred.append(pd.DataFrame.from_dict({ul:probas_dict}, orient='index'))
 
     count += 1
     if count == MAX_COUNT:
@@ -137,12 +152,10 @@ for _, ul in unlabeled_ids.iteritems():
 #------------------------------------------------------------------------------ 
 #        Create output file for Flask app
 #------------------------------------------------------------------------------
-tf_fund = tf.loc[tf.event_id == 'funded', ['id', 'dates', 'famt_cumsum', 'time_to_event']]
-# Dummy out:
-# sim_idx = {'c:516': pd.Int64Index([3177, 3373, 18874, 3630, 14942, 14504], dtype='int64')}
-filename = '../data/flask_db_full.pkl'
-print('Writing to file {}...'.format(filename))
-pickle.dump([pred, sim_idx, df, tf_fund, y], open(filename, 'wb'))
+# tf_fund = tf.loc[tf.event_id == 'funded', ['id', 'dates', 'famt_cumsum', 'time_to_event']]
+# filename = '../data/flask_db_full.pkl'
+# print('Writing to file {}...'.format(filename))
+# pickle.dump([pred, sim_idx, feat_imp, df, tf_fund, y], open(filename, 'wb'))
 
 print('done.')
 #==============================================================================

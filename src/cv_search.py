@@ -26,7 +26,12 @@ from sklearn.svm import SVC
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from sklearn.metrics import classification_report
 
-from timeline_features import feat_cols, upsample_minority
+from timeline_features import upsample_minority
+
+feat_cols = ['experience', 'latitude', 'longitude', 'offices', 'products', 'mean_fund_time',
+             'funding_rounds', 'mean_funding_amt', 'cumulative_famt',
+             'mean_milestone_time', 'milestones', 'mean_investment_time',
+             'investments', 'mean_acquisition_time', 'acquisitions']
 
 #------------------------------------------------------------------------------ 
 #       Perform gridsearch on most dense data

@@ -5,6 +5,8 @@
   <div class="starter-template">
     <h2>EndGame Research</h2>
     <h4>Startups Most Likely to Exit</h4>
+    <p>Click on a row for more information, or 
+    <a href='{{ url_for('endgame_search') }}'>Search</a> for a startup!</p>
   </div>
   <table class="table table-hover">
     <tr>
@@ -22,7 +24,7 @@
       <td>{{ comp.category_code }}</td>
       <td>{{ comp.founding_date.strftime('%m/%d/%Y') }}</td>
       <td>{{ comp.last_funding_date.strftime('%m/%d/%Y') }}</td>
-      <td>{{ '${:,.2f}'.format(comp.famt_cumsum) }}</td>
+      <td>{{ comp.famt_str }}</td>
     </tr>
     {% endfor %}
   </table>

@@ -16,13 +16,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import StandardScaler, LabelBinarizer, label_binarize
 from sklearn.utils import resample
 
-# feat_cols = ['latitude', 'longitude', 'offices', 'products', 'experience',
-#              'mean_fund_time', 'funding_rounds', 'mean_funding_amt',
-#              'cumulative_famt',
-#              'mean_milestone_time', 'milestones',
-#              'mean_investment_time', 'investments',
-#              'mean_acquisition_time', 'acquisitions']
-
 feat_cols = []
 
 classes = ['Timely Exit', 'Late Exit', 'Slow Growth']

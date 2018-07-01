@@ -12,7 +12,7 @@
       <form action="/output" method="GET">
         <div class="form-group">
           <label for="company_name">Company Name:</label>
-          <input type="text" id="company_name" name='company_name' placeholder="e.g. Square">
+          <input type="text" id="company_name" name='company_name' placeholder="e.g. Dropbox">
         </div>
         <div>
           <button type="submit" class="btn btn-default btn-lg">Go!</button>
@@ -65,5 +65,21 @@
     </div><!-- /.starter-template -->
   </div><!-- /.container -->
   {% endif %}
+
+  <!-- feature importance -->
+  <div class="container">
+  {% if fp %}
+  <p>The 5 most important features in the analysis were:</p>
+  <table class="table table-hover">
+    <tr> <th>Feature</th> <th>Importance</th> </tr>
+    {% for feat in fp %}
+    <tr><td>{{ feat[0].replace('_', ' ') }}</td>
+      <td>{{ "{:0.2f}%".format(100*feat[1]) }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+  </div>
+
 </div><!-- /.container -->
 {% endblock %}

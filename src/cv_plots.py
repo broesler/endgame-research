@@ -27,9 +27,9 @@ from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import train_test_split
 
-from timeline_features import classes, feat_cols, upsample_minority
+from timeline_features import classes, upsample_minority
 
-save_flag = 1
+save_flag = 0
 fig_dir = '../figures/'
 fig_ext = '.png'
 
@@ -39,7 +39,29 @@ sns.set_style('whitegrid')
 sns.set_context('poster', font_scale=1.3)
 # sns.set_context()
 
-X_max, y_max, X, y = pickle.load(open('../data/Xy_age_5yrs.pkl', 'rb'))
+feat_cols = ['experience', 'latitude', 'longitude', 'offices', 'products',
+             'mean_fund_time', 'funding_rounds', 'mean_funding_amt',
+             'cumulative_famt', 'mean_milestone_time', 'milestones',
+             'mean_investment_time', 'investments', 'mean_acquisition_time',
+             'acquisitions']
+
+#------------------------------------------------------------------------------ 
+#       Load the data
+#------------------------------------------------------------------------------
+in_file = '../data/train_inputs_N5.pkl'
+X_test, y_test, unlabeled_ids, clf = pickle.load(open(in_file, 'rb'))
+
+out_file = '../data/timeline_output_test_svc_N5.pkl'
+pred, ages, score, f1, fm = pickle.load(open(out_file, 'rb'))
+
+# Get feature matrix for max age
+key_age_max = max(ages, key=(lambda key: ages[key]))
+X_max = X_test[key_age_max]
+X_max = X_max.loc[~X_max.id.isin(unlabeled_ids)]
+y_max = y_test.loc[~y_test.id.isin(unlabeled_ids)]
+
+X, y = upsample_minority(X_max[feat_cols], y_max[['label']], maj_lab=2)
+# X_max, y_max, X, y = pickle.load(open('../data/Xy_age_5yrs.pkl', 'rb'))
 
 # Binarize the labels
 lb = LabelBinarizer()
